@@ -4,12 +4,13 @@ import jwt
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
-
+import time, logging
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION
 from database import LocalSession
 from models import User, Roles, InvalidJWTs
 
 hasher = argon2.PasswordHasher()
+logger = logging.getLogger("api")
 
 def get_db():
     db = LocalSession()
@@ -72,6 +73,7 @@ def verify_password(email: str, password: str, db: Session = Depends(get_db()) )
 
 # For things that require admin access, acts as middleware basically
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    logger.debug(f"Admin privileges used by: {current_user.email}")
     if current_user.role != Roles.Staff:
         raise HTTPException(status_code=403, detail="You are not an admin :(")
     return current_user

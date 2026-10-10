@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from argon2.exceptions import VerifyMismatchError
 from sqlalchemy.orm import Session
 
-from helpers import get_db, get_current_user, create_jwt, hasher, verify_password, get_jwt_expiry, clean_invalid_jwts
+from helpers import get_db, get_current_user, create_jwt, hasher, verify_password, get_jwt_expiry, clean_invalid_jwts, \
+    logger
 from models import User, Roles, InvalidJWTs
 from schemas import CreateAccount, AccountResponse, LoginRequest, LoginResponse, PasswordUpdate
 
@@ -24,6 +25,8 @@ async def create_account(account: CreateAccount, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    logger.info(f"New user: {new_user.id}")
+    return Response(status_code=status.HTTP_201_CREATED, content=f"Account created")
 
 
 @router.get("/me", response_model=User)
@@ -44,6 +47,7 @@ async def login(account: LoginRequest, db: Session = Depends(get_db)):
 
 @router.delete("/me")
 async def delete_account(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    logger.info(f"User {current_user.id} deleted")
     db.delete(current_user)
     db.commit()
     db.refresh(current_user)
@@ -80,5 +84,5 @@ async def update_password(password: PasswordUpdate, current_user: User = Depends
     if verify_password(current_user.email, password.old_password):
         db_user: User = db.query(User).filter(User.id == current_user.id).first()
         db_user.password = hasher.hash(password.new_password)
-
+        logger.info(f"Password updated for user: {db_user.id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)

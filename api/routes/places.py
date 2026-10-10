@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
-from helpers import get_db, require_admin
+from helpers import get_db, require_admin, logger
 from models import Place, User
 from schemas import PlacesResponse, PlacesFilterRequest, \
     PlaceResponse, CreatePlace
@@ -40,7 +40,7 @@ async def get_place(place_id: int, db: Session = Depends(get_db)):
 @router.post("")
 async def create_place(newPlace: CreatePlace,
                        db: Session = Depends(get_db),
-                       current_user: User = require_admin()):
+                       user: User = require_admin()):
     db.add(Place(
         name=newPlace.name,
         description=newPlace.description,
@@ -50,6 +50,7 @@ async def create_place(newPlace: CreatePlace,
     ))
     db.commit()
     db.refresh(newPlace)
+    logger.info(f"User: {user.email} created place: {newPlace.name}")
     return Response(status_code=status.HTTP_200_OK, content=newPlace.model_dump())
 
 
@@ -59,4 +60,5 @@ async def delete_place(place_id: int, user=require_admin(), db: Session = Depend
     db.delete(place)
     db.commit()
     db.refresh(place)
-    return Response(status_code=status.HTTP_200_OK, content=f"Place: {id} deleted")
+    logger.info(f"User: {user.email} deleted place: {place_id}")
+    return Response(status_code=status.HTTP_200_OK, content=f"Place: {place_id} deleted")
