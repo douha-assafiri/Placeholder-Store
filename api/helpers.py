@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 import time, logging
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION
 from database import LocalSession
-from models import User, Roles, InvalidJWTs
+from models import User, Roles, InvalidJWTs, Place
+from fastapi import status
 
 hasher = argon2.PasswordHasher()
 logger = logging.getLogger("api")
@@ -85,3 +86,12 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != Roles.Staff:
         raise HTTPException(status_code=403, detail="You are not an admin :(")
     return current_user
+
+def lookup_price(place_id, db: Session = Depends(get_db)) -> float:
+    price = db.query(Place.price).filter(Place.id == place_id).scalar()
+    if price is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Place not found",
+        )
+    return price

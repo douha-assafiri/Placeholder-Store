@@ -73,9 +73,7 @@ class PlacesResponse(BaseModel):
 
 # ORDERS
 class OrderRequest(BaseModel):
-    id: int
     place_id: int
-    price: float
 
 
 class OrderResponse(BaseModel):

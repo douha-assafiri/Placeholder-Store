@@ -1,5 +1,4 @@
 import pytest
-
 from conftest import auth
 
 def test_create_account(client):

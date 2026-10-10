@@ -89,6 +89,6 @@ async def update_password(password: PasswordUpdate, current_user: User = Depends
         logger.info(f"Password updated for user: {db_user.id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.patch("/me/orders", response_model=OrdersResponse)
+@router.get("/me/orders", response_model=list[OrderResponse], status_code=status.HTTP_200_OK)
 async def view_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(Order).filter(Order.user_id == current_user.id).all()
+    return db.query(Order).filter(Order.owner == current_user.id).all()
