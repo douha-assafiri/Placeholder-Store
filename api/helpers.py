@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta, timezone
 import argon2
 import jwt
+from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION
 from database import LocalSession
-from models import User, Roles
-
+from models import User, Roles, InvalidJWTs
 
 hasher = argon2.PasswordHasher()
 
@@ -28,6 +28,24 @@ def create_jwt(ident: int) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)  # Encoded into base64 hs265
 
+def is_invalid_jwt(token, db: Session = Depends(get_db)) -> bool:
+    if db.query(InvalidJWTs).filter(InvalidJWTs.jwt == token).first() is None:
+        return False
+    else:
+        return True
+
+def get_jwt_expiry(token: str) -> datetime:
+    payload = jwt.decode(
+        token,
+        JWT_SECRET,
+        algorithms=[JWT_ALGORITHM],
+        options={"verify_exp": False}, # Allows us to read expired tokens still
+    )
+    return datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+
+def clean_invalid_jwts(db: Session = Depends(get_db)):
+    db.query(InvalidJWTs).filter(InvalidJWTs.expiry < datetime.now(timezone.utc)).delete(synchronize_session=False)
+    db.commit()
 
 def get_current_user(authorization: str = Header(...), db: Session = Depends(get_db)) -> User:
     if not authorization.startswith("Bearer "):
@@ -45,10 +63,16 @@ def get_current_user(authorization: str = Header(...), db: Session = Depends(get
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-
+def verify_password(email: str, password: str, db: Session = Depends(get_db()) ) -> bool:
+    db_account: User = db.query(User).filter(User.email == email).first()
+    try:
+        hasher.verify(db_account.password, password)
+    except VerifyMismatchError:
+        return False
+    return True
 
 # For things that require admin access, acts as middleware basically
-async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != Roles.Staff:
         raise HTTPException(status_code=403, detail="You are not an admin :(")
     return current_user

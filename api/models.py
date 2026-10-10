@@ -34,3 +34,8 @@ class Order(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
     owner = Column(String, index=True, ForeignKey="users.id")
     place_id = Column(String, index=True, ForeignKey="places.id")
+
+class InvalidJWTs(BaseModel):
+    __tablename__ = "invalid_jwts"
+    jwt = Column(String, primary_key=True, index=True)
+    expiry = Column(DateTime, index=True)

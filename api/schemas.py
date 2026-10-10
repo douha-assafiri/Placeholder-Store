@@ -14,7 +14,18 @@ class AccountResponse(BaseModel):
     name: str
     email: str
     dob: datetime
-    role = Column(String)
+    role = Roles
+
+
+class AccountUpdate(BaseModel):
+    name: str
+    email: str
+    dob: datetime
+
+
+class PasswordUpdate(BaseModel):
+    old_password: str
+    new_password: str
 
 
 class LoginRequest(BaseModel):
