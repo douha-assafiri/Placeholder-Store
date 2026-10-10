@@ -12,12 +12,14 @@ from models import User, Roles, InvalidJWTs
 hasher = argon2.PasswordHasher()
 logger = logging.getLogger("api")
 
+
 def get_db():
     db = LocalSession()
     try:
         yield db
     finally:
         db.close()
+
 
 # JWT Explained: https://www.geeksforgeeks.org/web-tech/json-web-token-jwt/
 def create_jwt(ident: int) -> str:
@@ -28,31 +30,36 @@ def create_jwt(ident: int) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)  # Encoded into base64 hs265
 
+
 def is_invalid_jwt(token, db: Session = Depends(get_db)) -> bool:
     if db.query(InvalidJWTs).filter(InvalidJWTs.jwt == token).first() is None:
         return False
     else:
         return True
 
+
 def get_jwt_expiry(token: str) -> datetime:
     payload = jwt.decode(
         token,
         JWT_SECRET,
         algorithms=[JWT_ALGORITHM],
-        options={"verify_exp": False}, # Allows us to read expired tokens still
+        options={"verify_exp": False},  # Allows us to read expired tokens still
     )
     return datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+
 
 def clean_invalid_jwts(db: Session = Depends(get_db)):
     db.query(InvalidJWTs).filter(InvalidJWTs.expiry < datetime.now(timezone.utc)).delete(synchronize_session=False)
     db.commit()
+
 
 def get_current_user(authorization: str = Header(...), db: Session = Depends(get_db)) -> User:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid Authorization Header")
     token = authorization.removeprefix("Bearer ")
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])  # Decode with JWT, with what it encrypted with
+        payload = jwt.decode(token, JWT_SECRET,
+                             algorithms=[JWT_ALGORITHM])  # Decode with JWT, with what it encrypted with
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Signature has expired")
     except jwt.InvalidTokenError:
@@ -63,13 +70,15 @@ def get_current_user(authorization: str = Header(...), db: Session = Depends(get
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-def verify_password(email: str, password: str, db: Session = Depends(get_db()) ) -> bool:
+
+def verify_password(email: str, password: str, db: Session = Depends(get_db())) -> bool:
     db_account: User = db.query(User).filter(User.email == email).first()
     try:
         hasher.verify(db_account.password, password)
     except VerifyMismatchError:
         return False
     return True
+
 
 # For things that require admin access, acts as middleware basically
 def require_admin(current_user: User = Depends(get_current_user)) -> User:

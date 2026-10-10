@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum as pyEnum
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Enum
-from pydantic import BaseModel
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Enum, ForeignKey
+from database import Base
 
 # Not the enum change. Bcs obvsiously cant be the same name, so a python enum is PyEnum !!
 
@@ -9,7 +9,7 @@ class Roles(pyEnum):
     Customer = "Customer"
     Staff = "Staff"
 
-class User(BaseModel):
+class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
@@ -19,7 +19,7 @@ class User(BaseModel):
     role = Column(Enum(Roles), default=Roles.Customer)
 
 
-class Place(BaseModel):
+class Place(Base):
     __tablename__ = "places"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
@@ -29,14 +29,14 @@ class Place(BaseModel):
     price = Column(Integer, index=True)
 
 
-class Order(BaseModel):
+class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
-    owner = Column(String, index=True, ForeignKey="users.id")
-    place_id = Column(String, index=True, ForeignKey="places.id")
+    owner = Column(String, ForeignKey("users.id"), index=True)
+    place_id = Column(String, ForeignKey("places.id"), index=True)
     price = Column(Integer)
 
-class InvalidJWTs(BaseModel):
+class InvalidJWTs(Base):
     __tablename__ = "invalid_jwts"
     jwt = Column(String, primary_key=True, index=True)
     expiry = Column(DateTime, index=True)

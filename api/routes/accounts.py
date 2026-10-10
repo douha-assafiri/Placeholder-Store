@@ -30,7 +30,7 @@ async def create_account(account: CreateAccount, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_201_CREATED, content=f"Account created")
 
 
-@router.get("/me", response_model=User)
+@router.get("/me", response_model=AccountResponse)
 async def get_account(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -39,7 +39,7 @@ async def get_account(current_user: User = Depends(get_current_user)):
 async def login(account: LoginRequest, db: Session = Depends(get_db)):
     id = db.query(User.id).filter(User.email == account.email).first()
     if not id:
-        raise HTTPException(status_code=404, detail="Incorrect email or password")
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
     if verify_password(account.email, account.password):
         token = create_jwt(id)
         return LoginResponse(token=token, id=id)

@@ -14,7 +14,7 @@ class AccountResponse(BaseModel):
     name: str
     email: str
     dob: datetime
-    role = Roles
+    role: Roles
 
 
 class AccountUpdate(BaseModel):

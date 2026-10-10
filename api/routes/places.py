@@ -40,7 +40,7 @@ async def get_place(place_id: int, db: Session = Depends(get_db)):
 @router.post("")
 async def create_place(newPlace: CreatePlace,
                        db: Session = Depends(get_db),
-                       user: User = require_admin()):
+                       user: User = Depends(require_admin)):
     db.add(Place(
         name=newPlace.name,
         description=newPlace.description,
@@ -55,7 +55,7 @@ async def create_place(newPlace: CreatePlace,
 
 
 @router.delete("/{place_id}")
-async def delete_place(place_id: int, user=require_admin(), db: Session = Depends(get_db)):
+async def delete_place(place_id: int, user: User = Depends(require_admin), db: Session = Depends(get_db)):
     place = db.query(Place).filter(Place.id == place_id).first()
     db.delete(place)
     db.commit()
