@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from enum import Enum as pyEnum
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Enum
 from pydantic import BaseModel
