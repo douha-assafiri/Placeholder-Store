@@ -71,10 +71,9 @@ def get_current_user(authorization: str = Header(...), db: Session = Depends(get
     return user
 
 
-def verify_password(email: str, password: str, db: Session = Depends(get_db())) -> bool:
-    db_account: User = db.query(User).filter(User.email == email).first()
+def verify_password(user: User, password: str) -> bool:
     try:
-        hasher.verify(db_account.password, password)
+        hasher.verify(user.password, password)
     except VerifyMismatchError:
         return False
     return True

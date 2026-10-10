@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from argon2.exceptions import VerifyMismatchError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from helpers import get_db, get_current_user, create_jwt, hasher, verify_password, get_jwt_expiry, clean_invalid_jwts, \
@@ -23,9 +24,12 @@ async def create_account(account: CreateAccount, db: Session = Depends(get_db)):
         dob=account.dob,
         role=Roles.Customer
     )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Account already exists")
     logger.info(f"New user: {new_user.id}")
     return Response(status_code=status.HTTP_201_CREATED, content=f"Account created")
 
@@ -37,14 +41,11 @@ async def get_account(current_user: User = Depends(get_current_user)):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(account: LoginRequest, db: Session = Depends(get_db)):
-    id = db.query(User.id).filter(User.email == account.email).first()
-    if not id:
+    user: User = db.query(User).filter(User.email == account.email).first()
+    if user is None or not verify_password(user, account.password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-    if verify_password(account.email, account.password):
-        token = create_jwt(id)
-        return LoginResponse(token=token, id=id)
-    else:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    token = create_jwt(user.id)
+    return LoginResponse(token=token, id=user.id)
 
 @router.delete("/me")
 async def delete_account(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

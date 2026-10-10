@@ -24,7 +24,7 @@ def test_duplicate_email(client):
     response = client.post("/accounts/create", json={
         "name": "John Smith", "email": "john@smith.com", "password": "johnSmith<3",
         "dob": "2000-01-01T00:00:00"})
-    assert response.status_code == 400
+    assert response.status_code == 409
 
 def test_login_wrong_password(client, customer):
     response = client.post("/accounts/login", json={"email": customer.email, "password": "nope"})
