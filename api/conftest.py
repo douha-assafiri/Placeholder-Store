@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from database import Base
 from helpers import get_db, create_jwt, hasher
-from models import User, Roles
+from models import User, Roles, Place
 from main import app
 
 # Set the default enviroment variables for testing
@@ -37,17 +37,32 @@ def client(db):
 
 def make_user(db, email="test@customer.com", password="test123!", role=Roles.Customer):
     user = User(name="Test", email=email, password=hasher.hash(password), role=role)
-    db.add(user); db.commit(); db.refresh(user)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return user
 
 @pytest.fixture
 def customer(db):
     return make_user(db)
 
-
 @pytest.fixture
 def staff(db):
-    return make_user(db, email="test@staff.com", password="test456@")
+    return make_user(db, email="test@staff.com", password="test456@", role=Roles.Staff)
+
+@pytest.fixture
+def places(db):
+    items = [
+        Place(name="Cheap Cafe", description="Eat here", image_path="a", stock=True, price=5),
+        Place(name="Mid Bar", description="Eat here", image_path="b", stock=False, price=50),
+        Place(name="Fancy Hotel", description="Sleep here", image_path="c", stock=True, price=200),
+    ]
+    db.add_all(items)
+    db.commit()
+    return items
+
+def names(response):
+    return {p["name"] for p in response.json()["places"]}
 
 def auth(user):
     return {"Authorization": f"Bearer {create_jwt(user.id)}"}

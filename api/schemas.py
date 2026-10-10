@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from models import Roles
 
 
@@ -11,6 +11,7 @@ class CreateAccount(BaseModel):
     dob: datetime
 
 class AccountResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     name: str
     email: str
     dob: datetime
@@ -49,6 +50,7 @@ class CreatePlace(BaseModel):
 
 
 class PlaceResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
     description: str
@@ -77,6 +79,7 @@ class OrderRequest(BaseModel):
 
 
 class OrderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     place_id: int
     price: float

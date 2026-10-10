@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.orm import Session
 
 from helpers import get_db, require_admin, logger
@@ -14,7 +15,7 @@ router = APIRouter(
 
 # The empty path means it just goes to the prefix above, I.e places
 @router.get("", response_model=PlacesResponse)
-async def get_places_filter(filters: PlacesFilterRequest, db: Session = Depends(get_db)):
+async def get_places_filter(filters: PlacesFilterRequest = Depends(), db: Session = Depends(get_db)):
     #https://stackoverflow.com/questions/31063860/conditionally-filtering-in-sqlalchemy
     query = db.query(Place)
 
@@ -26,10 +27,10 @@ async def get_places_filter(filters: PlacesFilterRequest, db: Session = Depends(
         query = query.filter(Place.stock == filters.stock)
     if filters.price_min is not None:
         query = query.filter(Place.price >= filters.price_min)
-    if filters.price_min is not None:
+    if filters.price_max is not None:
         query = query.filter(Place.price <= filters.price_max)
 
-    return PlaceResponse(places=query.all())
+    return PlacesResponse(places=query.all())
 
 
 @router.get("/{place_id}", response_model=PlaceResponse)
@@ -41,24 +42,27 @@ async def get_place(place_id: int, db: Session = Depends(get_db)):
 async def create_place(newPlace: CreatePlace,
                        db: Session = Depends(get_db),
                        user: User = Depends(require_admin)):
-    db.add(Place(
+    place = Place(
         name=newPlace.name,
         description=newPlace.description,
         image_path=newPlace.image_path,
         stock=newPlace.stock,
         price=newPlace.price
-    ))
+    )
+    db.add(place)
     db.commit()
-    db.refresh(newPlace)
+    db.refresh(place)
     logger.info(f"User: {user.email} created place: {newPlace.name}")
-    return Response(status_code=status.HTTP_200_OK, content=newPlace.model_dump())
+    return Response(status_code=status.HTTP_201_CREATED, content=f"Place: {newPlace.name} created")
 
 
 @router.delete("/{place_id}")
 async def delete_place(place_id: int, user: User = Depends(require_admin), db: Session = Depends(get_db)):
     place = db.query(Place).filter(Place.id == place_id).first()
-    db.delete(place)
-    db.commit()
-    db.refresh(place)
+    try:
+        db.delete(place)
+        db.commit()
+    except InvalidRequestError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No place with that id")
     logger.info(f"User: {user.email} deleted place: {place_id}")
-    return Response(status_code=status.HTTP_200_OK, content=f"Place: {place_id} deleted")
+    return Response(status_code=status.HTTP_204_NO_CONTENT, content=f"Place: {place_id} deleted")

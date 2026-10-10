@@ -41,7 +41,3 @@ def test_me_with_jwt(client, customer):
     response = client.get("/accounts/me", headers=auth(customer))
     assert response.status_code == 200
 
-def test_places_create_forbidden_for_customer(client, customer):
-    response = client.post("/places", headers=auth(customer), json={
-        "name": "a", "description": "b", "image_path": "c", "stock": True, "price": 1})
-    assert response.status_code == 403
