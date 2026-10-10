@@ -34,6 +34,7 @@ class Order(BaseModel):
     id = Column(Integer, primary_key=True, index=True)
     owner = Column(String, index=True, ForeignKey="users.id")
     place_id = Column(String, index=True, ForeignKey="places.id")
+    price = Column(Integer)
 
 class InvalidJWTs(BaseModel):
     __tablename__ = "invalid_jwts"

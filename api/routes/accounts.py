@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 
 from helpers import get_db, get_current_user, create_jwt, hasher, verify_password, get_jwt_expiry, clean_invalid_jwts, \
     logger
-from models import User, Roles, InvalidJWTs
-from schemas import CreateAccount, AccountResponse, LoginRequest, LoginResponse, PasswordUpdate
+from models import User, Roles, InvalidJWTs, Order
+from schemas import CreateAccount, AccountResponse, LoginRequest, LoginResponse, PasswordUpdate, OrderResponse, \
+    OrdersResponse
 
 router = APIRouter(
     prefix="/accounts",
@@ -86,3 +87,7 @@ async def update_password(password: PasswordUpdate, current_user: User = Depends
         db_user.password = hasher.hash(password.new_password)
         logger.info(f"Password updated for user: {db_user.id}")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.patch("/me/orders", response_model=OrdersResponse)
+async def view_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(Order).filter(Order.user_id == current_user.id).all()

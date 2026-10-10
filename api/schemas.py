@@ -80,3 +80,6 @@ class OrderResponse(BaseModel):
     id: int
     place_id: int
     price: float
+
+class OrdersResponse(BaseModel):
+    orders: list[OrderResponse]
