@@ -12,8 +12,6 @@ router = APIRouter(
 )
 
 
-
-
 @router.post("/create")
 async def create_account(account: CreateAccount, db: Session = Depends(get_db)):
     new_user = User(
@@ -26,7 +24,7 @@ async def create_account(account: CreateAccount, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    #TODO, return a success or something? We shouldnt need a response model for creating an account, just http 200
+
 
 @router.get("/me", response_model=User)
 async def get_account(current_user: User = Depends(get_current_user)):

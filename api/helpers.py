@@ -11,7 +11,6 @@ from models import User, Roles, InvalidJWTs
 
 hasher = argon2.PasswordHasher()
 
-
 def get_db():
     db = LocalSession()
     try:
