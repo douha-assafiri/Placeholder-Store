@@ -6,7 +6,7 @@ services:
       dockerfile: docker/Dockerfile
     volumes:
       - ../dev.sqlite3:/api/dev.sqlite3:z
-    image: docker.io/krakekrake/placeholder-store:backend
+    image: docker.io/krakekrake/placeholder-store:backend-latest
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ALGORITHM=HS256
