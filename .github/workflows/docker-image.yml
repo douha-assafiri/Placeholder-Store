@@ -7,9 +7,24 @@ on:
     branches: [ "main" ]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
 
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6 # This is needed to use UV as package manager
+      - name: Install Python and Dependencies
+        run: |
+          uv python install
+          uv sync --dev
+      - name: Run Tests
+        run: uv run pytest -v
+        
   build:
-
+    needs: test # Makes passing tests a requirement
     runs-on: ubuntu-latest
 
     steps:
