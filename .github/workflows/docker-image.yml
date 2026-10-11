@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: API Test and Build CI
 
 on:
   push:
@@ -16,10 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6 # This is needed to use UV as package manager
+        with:
+          enable-cache: true # Install the dependencies faster from a cache
       - name: Install Python and Dependencies
         run: |
           uv python install
-          uv sync --dev
+          uv sync --locked --dev 
       - name: Run Tests
         run: uv run pytest -v
         
@@ -29,5 +31,31 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build api --file api/docker/Dockerfile --tag placeholder-store:backend-$(date +%s)
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Log in to Docker Hub
+      if: github.event_name == 'push' # Only on a push not on all PRs
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PAT }}
+
+    - name: Tag Image
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
+        tags: |
+          type=raw,value=backend-latest
+          type=sha,prefix=backend-
+    
+    - name: Build the Docker and push
+      uses: docker/build-push-action@v6
+      with:
+        context: api
+        file: api/docker/Dockerfile
+        push: ${{ github.event_name == 'push' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}    
