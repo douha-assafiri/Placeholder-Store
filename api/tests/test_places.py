@@ -5,7 +5,7 @@ from conftest import auth, staff
 def test_get_places_no_filter(client, places):
     response = client.get("/places")
     assert response.status_code == 200
-    assert len(response.json()["places"]) == 3
+    assert len(response.json()) == 3
 
 @pytest.mark.parametrize(
     "test_filter, value, expected",
@@ -30,7 +30,7 @@ def test_get_with_filters(client, places,test_filter, value, expected):
     response = client.get("/places", params={test_filter: value})
     print(response.json())
     assert response.status_code == 200
-    assert len(response.json()["places"]) == expected
+    assert len(response.json()) == expected
 
 def test_places_create_forbidden_for_customer(client, customer):
     response = client.post("/places", headers=auth(customer), json={
@@ -45,9 +45,9 @@ def test_add_place_with_admin(client, staff):
 def test_delete_place_with_admin(client, staff, places):
     response = client.delete(f"/places/{places[0].id}", headers=auth(staff))
     assert response.status_code == 204
-    assert len(client.get("/places").json()["places"]) == 2 # Assert there are 2 left
+    assert len(client.get("/places").json()) == 2 # Assert there are 2 left
 
 def test_delete_non_existent_place(client, staff, places):
     response = client.delete(f"/places/{len(places)+1}", headers=auth(staff))
     assert response.status_code == 404
-    assert len(client.get("/places").json()["places"]) == 3 # Assert there are 3 left
+    assert len(client.get("/places").json()) == 3 # Assert there are 3 left
