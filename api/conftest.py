@@ -1,4 +1,9 @@
 import os
+os.environ.setdefault("JWT_SECRET", "test-secret")
+os.environ.setdefault("JWT_ALGORITHM", "HS256")
+os.environ.setdefault("JWT_EXPIRATION", "1")
+os.environ.setdefault("DB_URL", "sqlite://")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, StaticPool
@@ -10,10 +15,6 @@ from models import User, Roles, Place
 from main import app
 
 # Set the default enviroment variables for testing
-os.environ.setdefault("JWT_SECRET", "test-secret")
-os.environ.setdefault("JWT_ALGORITHM", "HS256")
-os.environ.setdefault("JWT_EXPIRATION", "1")
-os.environ.setdefault("DB_URL", "sqlite://")
 
 
 @pytest.fixture
