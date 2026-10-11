@@ -1,5 +1,4 @@
-import pytest
-from conftest import auth, staff, places
+from conftest import auth, places
 
 
 def test_place_order(client, customer, places):

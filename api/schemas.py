@@ -42,7 +42,7 @@ class LoginResponse(BaseModel):
 class CreatePlace(BaseModel):
     name: str
     description: str
-    # So ideally this would be just the id, and multiple images would go into a folder of the flowers id.
+    # So ideally this would be just the id, and multiple images would go into a folder of the flower's id.
     # But that is annoying to do, so instead we just specify some remote image path it'll be fine.
     image_path: str
     stock: bool
@@ -66,10 +66,6 @@ class PlacesFilterRequest(BaseModel):
     stock: bool | None = None
     price_min: float | int | None = None
     price_max: float| int | None = None
-
-class PlacesResponse(BaseModel):
-    places: list[PlaceResponse]
-
 
 # ORDERS
 class OrderRequest(BaseModel):

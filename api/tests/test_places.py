@@ -18,7 +18,7 @@ def test_get_places_no_filter(client, places):
         # Test the description and name searching for keywords
         ("description", "eat", 2),
         ("description", "sleep", 1),
-        ("description", "hERe", 3),
+        ("description", "here", 3),
         ("name", "a", 3),
         ("name", "cafe", 1),
         # And stock

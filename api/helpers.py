@@ -1,14 +1,16 @@
+import logging
 from datetime import datetime, timedelta, timezone
+
 import argon2
 import jwt
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, Header, HTTPException
+from fastapi import status
 from sqlalchemy.orm import Session
-import time, logging
+
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION
 from database import LocalSession
 from models import User, Roles, InvalidJWTs, Place
-from fastapi import status
 
 hasher = argon2.PasswordHasher()
 logger = logging.getLogger("api")

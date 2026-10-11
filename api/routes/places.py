@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from helpers import get_db, require_admin, logger
 from models import Place, User
-from schemas import PlacesResponse, PlacesFilterRequest, \
+from schemas import PlacesFilterRequest, \
     PlaceResponse, CreatePlace
 
 router = APIRouter(
@@ -13,8 +13,8 @@ router = APIRouter(
 )
 
 
-# The empty path means it just goes to the prefix above, I.e places
-@router.get("", response_model=PlacesResponse)
+# The empty path means it just goes to the prefix above, I.e. places
+@router.get("", response_model=list[PlaceResponse])
 async def get_places_filter(filters: PlacesFilterRequest = Depends(), db: Session = Depends(get_db)):
     #https://stackoverflow.com/questions/31063860/conditionally-filtering-in-sqlalchemy
     query = db.query(Place)
@@ -30,7 +30,7 @@ async def get_places_filter(filters: PlacesFilterRequest = Depends(), db: Sessio
     if filters.price_max is not None:
         query = query.filter(Place.price <= filters.price_max)
 
-    return PlacesResponse(places=query.all())
+    return query.all()
 
 
 @router.get("/{place_id}", response_model=PlaceResponse)
@@ -39,21 +39,21 @@ async def get_place(place_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("")
-async def create_place(newPlace: CreatePlace,
+async def create_place(new_place: CreatePlace,
                        db: Session = Depends(get_db),
                        user: User = Depends(require_admin)):
     place = Place(
-        name=newPlace.name,
-        description=newPlace.description,
-        image_path=newPlace.image_path,
-        stock=newPlace.stock,
-        price=newPlace.price
+        name=new_place.name,
+        description=new_place.description,
+        image_path=new_place.image_path,
+        stock=new_place.stock,
+        price=new_place.price
     )
     db.add(place)
     db.commit()
     db.refresh(place)
-    logger.info(f"User: {user.email} created place: {newPlace.name}")
-    return Response(status_code=status.HTTP_201_CREATED, content=f"Place: {newPlace.name} created")
+    logger.info(f"User: {user.email} created place: {new_place.name}")
+    return Response(status_code=status.HTTP_201_CREATED, content=f"Place: {new_place.name} created")
 
 
 @router.delete("/{place_id}")

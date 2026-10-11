@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from argon2.exceptions import VerifyMismatchError
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from helpers import get_db, get_current_user, create_jwt, hasher, verify_password, get_jwt_expiry, clean_invalid_jwts, \
     logger
 from models import User, Roles, InvalidJWTs, Order
-from schemas import CreateAccount, AccountResponse, LoginRequest, LoginResponse, PasswordUpdate, OrderResponse, \
-    OrdersResponse
+from schemas import CreateAccount, AccountResponse, LoginRequest, LoginResponse, PasswordUpdate, OrderResponse
 
 router = APIRouter(
     prefix="/accounts",
@@ -41,7 +39,7 @@ async def get_account(current_user: User = Depends(get_current_user)):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(account: LoginRequest, db: Session = Depends(get_db)):
-    user: User = db.query(User).filter(User.email == account.email).first()
+    user = db.query(User).filter(User.email == account.email).first()
     if user is None or not verify_password(user, account.password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     token = create_jwt(user.id)
@@ -56,10 +54,10 @@ async def delete_account(db: Session = Depends(get_db), current_user: User = Dep
 
 @router.post("/logout")
 async def logout(token: str,
-                 user: User = Depends(get_current_user), # get_current_user does check token validity, so nobody submits a bunch of nonsense here.
+                 _user: User = Depends(get_current_user), # get_current_user does check token validity, so nobody submits a bunch of nonsense here.
                  db: Session = Depends(get_db)):
     db.add(InvalidJWTs(
-        token=token,
+        jwt=token,
         expiry = get_jwt_expiry(token)
     ))
     db.commit()
@@ -68,26 +66,24 @@ async def logout(token: str,
 
 
 
-@router.patch("/me", response_model=AccountResponse)
+@router.patch("/me")
 async def update_account(new_account_info: CreateAccount, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_user: User = db.query(User).filter(User.id == current_user.id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="Incorrect credentials")
-    db_user.name = new_account_info.name
-    db_user.email = new_account_info.email
-    db_user.dob = new_account_info.dob
-    db.add(db_user)
+    current_user.name = new_account_info.name
+    current_user.email = new_account_info.email
+    current_user.dob = new_account_info.dob
     db.commit()
-    db.refresh(db_user)
+    db.refresh(current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 @router.patch("/me/password")
 async def update_password(password: PasswordUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    if verify_password(current_user.email, password.old_password):
-        db_user: User = db.query(User).filter(User.id == current_user.id).first()
-        db_user.password = hasher.hash(password.new_password)
-        logger.info(f"Password updated for user: {db_user.id}")
+    if verify_password(current_user, password.old_password):
+        current_user.password = hasher.hash(password.new_password)
+        logger.info(f"Password updated for user: {current_user.id}")
+        db.commit()
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect credentials")
 
 @router.get("/me/orders", response_model=list[OrderResponse], status_code=status.HTTP_200_OK)
 async def view_orders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

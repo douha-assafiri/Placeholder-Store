@@ -1,9 +1,12 @@
 from datetime import datetime
 from enum import Enum as pyEnum
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Enum, ForeignKey
+
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, ForeignKey, Float
+
 from database import Base
 
-# Not the enum change. Bcs obvsiously cant be the same name, so a python enum is PyEnum !!
+
+# Not the enum change. Bcs obviously cant be the same name, so a python enum is PyEnum !!
 
 class Roles(pyEnum):
     Customer = "Customer"
@@ -26,15 +29,15 @@ class Place(Base):
     description = Column(String, index=True)
     image_path = Column(String, index=True)
     stock = Column(Boolean, index=True)
-    price = Column(Integer, index=True)
+    price = Column(Float, index=True)
 
 
 class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
-    owner = Column(String, ForeignKey("users.id"), index=True)
-    place_id = Column(String, ForeignKey("places.id"), index=True)
-    price = Column(Integer)
+    owner = Column(Integer, ForeignKey("users.id"), index=True)
+    place_id = Column(Integer, ForeignKey("places.id"), index=True)
+    price = Column(Float)
 
 class InvalidJWTs(Base):
     __tablename__ = "invalid_jwts"

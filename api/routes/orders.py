@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from helpers import get_db, require_admin, logger, get_current_user, lookup_price
+from helpers import get_db, logger, get_current_user, lookup_price
 from models import User, Order
 from schemas import OrderRequest
 
@@ -11,12 +11,12 @@ router = APIRouter(
 )
 
 @router.post("")
-async def create_order(newOrder: OrderRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    logger.debug(f"Creating order: {newOrder.model_dump()}")
+async def create_order(new_order: OrderRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    logger.debug(f"Creating order: {new_order.model_dump()}")
     order = Order(
         owner=current_user.id,
-        place_id=newOrder.place_id,
-        price=lookup_price(newOrder.place_id, db),
+        place_id=new_order.place_id,
+        price=lookup_price(new_order.place_id, db),
     )
     db.add(order)
     db.commit()

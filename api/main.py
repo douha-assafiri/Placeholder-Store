@@ -2,12 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import Base, engine
-from models import User, Place, Order
 from routes import accounts, orders, places
 
 Base.metadata.create_all(engine)
 
 app = FastAPI()
+
+# Type checker did not like this here, it *is* correct
+# noinspection PyTypeChecker
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

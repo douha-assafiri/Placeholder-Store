@@ -14,7 +14,7 @@ from helpers import get_db, create_jwt, hasher
 from models import User, Roles, Place
 from main import app
 
-# Set the default enviroment variables for testing
+# Set the default environment variables for testing
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def db():
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False}, # Allow multiple threads to talk to the db for speed
-        poolclass=StaticPool,  # Keeps only one db alive in memory only for speeeed
+        poolclass=StaticPool,  # Keeps only one db alive in memory only for speed
     )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
