@@ -62,7 +62,7 @@ jobs:
         cache-from: type=gha,scope=api
     - name: Tag frontend Image
       id: meta-frontend
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       with:
         images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
         tags: |
