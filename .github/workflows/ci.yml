@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/setup-uv@v6 # This is needed to use UV as package manager
+      with:
+        enable-cache: true # Install the dependencies faster from a cache
+    - name: Install Python and Dependencies
+      run: |
+        uv python install
+        uv sync --locked --dev
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        uvx flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude .venv
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        uvx flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude .venv
+    - name: Run Tests
+      run: uv run pytest --cov=. --cov-report=term
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x] # Vite needs 20.19+
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    - run: npm ci
+    - run: npm run lint
+    - run: npm run build
+
+  docker:
+    needs: [ api, frontend ] # Makes passing tests a requirement
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Build the API image
+      uses: docker/build-push-action@v6
+      with:
+        context: api
+        file: api/docker/Dockerfile
+        push: false # Pushing happens in cd.yml
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

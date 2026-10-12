@@ -1,0 +1,139 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: [ "CI" ]
+    types: [ completed ]
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECS_TASK_DEFINITION_STAGING: .aws/task-definition-staging.json
+  ECS_TASK_DEFINITION_PRODUCTION: .aws/task-definition-production.json
+  CONTAINER_NAME: api
+  # TODO: fill in once AWS is set up
+  # ECS_CLUSTER: MY_ECS_CLUSTER
+  # ECS_SERVICE_STAGING: MY_STAGING_SERVICE
+  # ECS_SERVICE_PRODUCTION: MY_PRODUCTION_SERVICE
+
+jobs:
+  push:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' # Only on a push not on all PRs
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.workflow_run.head_sha }} # The commit CI tested
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PAT }}
+    - name: Short commit ID
+      id: sha
+      run: echo "short=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
+      env:
+        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    - name: Tag Image
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
+        tags: |
+          type=raw,value=backend-latest
+          type=raw,value=backend-${{ steps.sha.outputs.short }}
+    - name: Build the Docker and push
+      uses: docker/build-push-action@v6
+      with:
+        context: api
+        file: api/docker/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+
+  # TODO: uncomment once AWS is set up
+  # deploy-staging:
+  #   needs: push
+  #   runs-on: ubuntu-latest
+  #   environment: staging
+  #
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #     with:
+  #       ref: ${{ github.event.workflow_run.head_sha }}
+  #   - name: Configure AWS credentials
+  #     uses: aws-actions/configure-aws-credentials@v6
+  #     with:
+  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       aws-region: ${{ env.AWS_REGION }}
+  #   - name: Fill in the AWS account ID
+  #     run: sed -i "s/AWS_ACCOUNT_ID/${{ secrets.AWS_ACCOUNT_ID }}/g" ${{ env.ECS_TASK_DEFINITION_STAGING }}
+  #   - name: Fill in the new image ID in the Amazon ECS task definition
+  #     id: task-def
+  #     uses: aws-actions/amazon-ecs-render-task-definition@v1
+  #     with:
+  #       task-definition: ${{ env.ECS_TASK_DEFINITION_STAGING }}
+  #       container-name: ${{ env.CONTAINER_NAME }}
+  #       image: ${{ needs.push.outputs.image }}
+  #   - name: Deploy Amazon ECS task definition
+  #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+  #     with:
+  #       task-definition: ${{ steps.task-def.outputs.task-definition }}
+  #       service: ${{ env.ECS_SERVICE_STAGING }}
+  #       cluster: ${{ env.ECS_CLUSTER }}
+  #       wait-for-service-stability: true
+
+  # TODO: uncomment once there are Playwright tests
+  # e2e:
+  #   needs: deploy-staging
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #     with:
+  #       ref: ${{ github.event.workflow_run.head_sha }}
+  #   - name: Run Playwright against staging
+  #     run: echo "TODO"
+
+  # TODO: uncomment once AWS is set up
+  # deploy-production:
+  #   needs: [ push, e2e ]
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #     with:
+  #       ref: ${{ github.event.workflow_run.head_sha }}
+  #   - name: Configure AWS credentials
+  #     uses: aws-actions/configure-aws-credentials@v6
+  #     with:
+  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       aws-region: ${{ env.AWS_REGION }}
+  #   - name: Fill in the AWS account ID
+  #     run: sed -i "s/AWS_ACCOUNT_ID/${{ secrets.AWS_ACCOUNT_ID }}/g" ${{ env.ECS_TASK_DEFINITION_PRODUCTION }}
+  #   - name: Fill in the new image ID in the Amazon ECS task definition
+  #     id: task-def
+  #     uses: aws-actions/amazon-ecs-render-task-definition@v1
+  #     with:
+  #       task-definition: ${{ env.ECS_TASK_DEFINITION_PRODUCTION }}
+  #       container-name: ${{ env.CONTAINER_NAME }}
+  #       image: ${{ needs.push.outputs.image }}
+  #   - name: Deploy Amazon ECS task definition
+  #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+  #     with:
+  #       task-definition: ${{ steps.task-def.outputs.task-definition }}
+  #       service: ${{ env.ECS_SERVICE_PRODUCTION }}
+  #       cluster: ${{ env.ECS_CLUSTER }}
+  #       wait-for-service-stability: true
