@@ -3,3 +3,6 @@ docker
 .env
 pytest.ini
 conftest.py
+.venv
+__pycache__
+*.sqlite3
