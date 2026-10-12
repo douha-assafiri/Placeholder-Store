@@ -27,7 +27,7 @@ jobs:
       image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.workflow_run.head_sha }} # The commit CI tested
     - name: Set up Docker Buildx
@@ -67,7 +67,7 @@ jobs:
   #   environment: staging
   #
   #   steps:
-  #   - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v7
   #     with:
   #       ref: ${{ github.event.workflow_run.head_sha }}
   #   - name: Configure AWS credentials
@@ -100,7 +100,7 @@ jobs:
   #   environment: staging
   #
   #   steps:
-  #   - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v7
   #     with:
   #       ref: ${{ github.event.workflow_run.head_sha }}
   #   - uses: astral-sh/setup-uv@v6
@@ -123,7 +123,7 @@ jobs:
   #   environment: production
   #
   #   steps:
-  #   - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v7
   #     with:
   #       ref: ${{ github.event.workflow_run.head_sha }}
   #   - name: Configure AWS credentials
