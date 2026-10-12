@@ -69,7 +69,7 @@ jobs:
           type=raw,value=frontend-latest
           type=raw,value=frontend-${{ steps.sha.outputs.short }}
     - name: Build the frontend Docker and push
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: frontend
         file: frontend/docker/Dockerfile
