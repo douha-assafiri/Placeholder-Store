@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
+      frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-${{ steps.sha.outputs.short }}
 
     steps:
     - uses: actions/checkout@v7
@@ -58,7 +59,24 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
+        cache-from: type=gha,scope=api
+    - name: Tag frontend Image
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
+        tags: |
+          type=raw,value=frontend-latest
+          type=raw,value=frontend-${{ steps.sha.outputs.short }}
+    - name: Build the frontend Docker and push
+      uses: docker/build-push-action@v6
+      with:
+        context: frontend
+        file: frontend/docker/Dockerfile
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+        cache-from: type=gha,scope=frontend
 
   # TODO (1/3): uncomment once AWS is set up
   # deploy-staging:

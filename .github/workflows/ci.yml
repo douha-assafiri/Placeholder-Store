@@ -118,5 +118,13 @@ jobs:
         context: api
         file: api/docker/Dockerfile
         push: false # Pushing happens in cd.yml
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=api
+        cache-to: type=gha,mode=max,scope=api
+    - name: Build the frontend image
+      uses: docker/build-push-action@v6
+      with:
+        context: frontend
+        file: frontend/docker/Dockerfile
+        push: false
+        cache-from: type=gha,scope=frontend
+        cache-to: type=gha,mode=max,scope=frontend
