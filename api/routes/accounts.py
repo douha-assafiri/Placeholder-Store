@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -50,18 +50,18 @@ async def delete_account(db: Session = Depends(get_db), current_user: User = Dep
     logger.info(f"User {current_user.id} deleted")
     db.delete(current_user)
     db.commit()
-    db.refresh(current_user)
 
 @router.post("/logout")
-async def logout(token: str,
+async def logout(authorization: str = Header(...),
                  _user: User = Depends(get_current_user), # get_current_user does check token validity, so nobody submits a bunch of nonsense here.
                  db: Session = Depends(get_db)):
+    token = authorization.removeprefix("Bearer ")  # Log out the token from the header, so users can only log themselves out
     db.add(InvalidJWTs(
         jwt=token,
         expiry = get_jwt_expiry(token)
     ))
     db.commit()
-    clean_invalid_jwts()
+    clean_invalid_jwts(db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

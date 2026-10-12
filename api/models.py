@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Foreign
 from database import Base
 
 
-# Not the enum change. Bcs obviously cant be the same name, so a python enum is PyEnum !!
+# Note the enum change. Bcs obviously cant be the same name, so a python enum is PyEnum !!
 
 class Roles(pyEnum):
     Customer = "Customer"

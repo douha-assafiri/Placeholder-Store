@@ -62,8 +62,5 @@ def places(db):
     db.commit()
     return items
 
-def names(response):
-    return {p["name"] for p in response.json()["places"]}
-
 def auth(user):
     return {"Authorization": f"Bearer {create_jwt(user.id)}"}

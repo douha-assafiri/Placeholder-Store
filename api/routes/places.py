@@ -35,7 +35,10 @@ async def get_places_filter(filters: PlacesFilterRequest = Depends(), db: Sessio
 
 @router.get("/{place_id}", response_model=PlaceResponse)
 async def get_place(place_id: int, db: Session = Depends(get_db)):
-    return db.query(Place).filter(Place.id == place_id).first()
+    place = db.query(Place).filter(Place.id == place_id).first()
+    if place is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No place with that id")
+    return place
 
 
 @router.post("")

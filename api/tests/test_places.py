@@ -51,3 +51,11 @@ def test_delete_non_existent_place(client, staff, places):
     response = client.delete(f"/places/{len(places)+1}", headers=auth(staff))
     assert response.status_code == 404
     assert len(client.get("/places").json()) == 3 # Assert there are 3 left
+def test_get_place(client, places):
+    response = client.get(f"/places/{places[0].id}")
+    assert response.status_code == 200
+    assert response.json()["name"] == places[0].name
+
+def test_get_non_existent_place(client, places):
+    response = client.get(f"/places/{len(places)+1}")
+    assert response.status_code == 404

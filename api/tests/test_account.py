@@ -40,3 +40,19 @@ def test_me_with_jwt(client, customer):
     response = client.get("/accounts/me", headers=auth(customer))
     assert response.status_code == 200
 
+
+def test_delete_account(client, customer):
+    response = client.delete("/accounts/me", headers=auth(customer))
+    assert response.status_code == 200
+
+def test_logout(client, customer):
+    headers = auth(customer)
+    response = client.post("/accounts/logout", headers=headers)
+    assert response.status_code == 204
+    assert client.get("/accounts/me", headers=headers).status_code == 401 # Token is now blocked
+
+def test_logout_other_user(client, customer, staff):
+    other_headers = auth(staff)
+    other_token = other_headers["Authorization"].removeprefix("Bearer ")
+    client.post("/accounts/logout", headers=auth(customer), params={"token": other_token})
+    assert client.get("/accounts/me", headers=other_headers).status_code == 200
