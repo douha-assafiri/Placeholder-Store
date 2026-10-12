@@ -27,11 +27,11 @@ def get_db():
 # JWT Explained: https://www.geeksforgeeks.org/web-tech/json-web-token-jwt/
 def create_jwt(ident: int) -> str:
     payload = {
-        "sub": str(ident),  # Subject (so the user(
+        "sub": str(ident),  # Subject (so the user)
         "iat": datetime.now(timezone.utc),  # Issuing time
         "exp": datetime.now(timezone.utc) + timedelta(hours=int(JWT_EXPIRATION)),  # Expiry time
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)  # Encoded into base64 hs265
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)  # Encoded into base64 HS256
 
 
 def is_invalid_jwt(token, db: Session = Depends(get_db)) -> bool:
@@ -67,6 +67,8 @@ def get_current_user(authorization: str = Header(...), db: Session = Depends(get
         raise HTTPException(status_code=401, detail="Signature has expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+    if is_invalid_jwt(token, db):  # Token was logged out
+        raise HTTPException(status_code=401, detail="Token has been logged out")
 
     user = db.query(User).filter(User.id == int(payload["sub"])).first()  # Look for the subject in the db
     if user is None:
