@@ -1,0 +1,12 @@
+export type Product = { id:number; name:string; category:string; price:number; oldPrice?:number; rating:number; image:string; tag?:string; description:string; stock:number }
+export const products: Product[] = [
+ {id:1,name:'Studio Wireless Headphones',category:'Electronics',price:149,oldPrice:199,rating:4.8,image:'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=85',tag:'Bestseller',description:'Immersive sound, soft ear cushions and an all-day battery for your everyday soundtrack.',stock:18},
+ {id:2,name:'Nordic Analog Watch',category:'Accessories',price:189,rating:4.9,image:'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=85',tag:'New',description:'A refined, minimalist watch designed to complement every outfit.',stock:12},
+ {id:3,name:'Everyday Runner Sneakers',category:'Fashion',price:109,oldPrice:139,rating:4.7,image:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=85',tag:'Sale',description:'Lightweight comfort and effortless style for wherever the day takes you.',stock:25},
+ {id:4,name:'Mirrorless Travel Camera',category:'Electronics',price:649,rating:4.9,image:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=900&q=85',description:'Capture life beautifully with a compact, capable everyday camera.',stock:8},
+ {id:5,name:'Classic Canvas Backpack',category:'Accessories',price:79,rating:4.6,image:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&q=85',description:'Smart storage, comfortable straps and a timeless look for daily adventures.',stock:30},
+ {id:6,name:'Minimal Desk Lamp',category:'Home & Living',price:89,rating:4.8,image:'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=900&q=85',tag:'Popular',description:'Warm, focused light in a clean design that fits any workspace.',stock:16},
+ {id:7,name:'Retro Sunglasses',category:'Fashion',price:59,rating:4.5,image:'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=900&q=85',description:'A classic silhouette made for sunny days and weekend escapes.',stock:21},
+ {id:8,name:'Portable Bluetooth Speaker',category:'Electronics',price:119,oldPrice:149,rating:4.7,image:'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=900&q=85',tag:'Sale',description:'Big sound in a small package. Take your favourite playlists anywhere.',stock:14},
+]
+export const money = (amount:number) => new Intl.NumberFormat('en-AU',{style:'currency',currency:'AUD'}).format(amount)
