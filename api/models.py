@@ -45,7 +45,7 @@ class Place(Base):
     rating = Column(Float, default=0)
     old_price = Column(Float, nullable=True)
     tag = Column(String(50), nullable=True)
-    quantity = Column(Integer, nullable=True) # None = not counted
+    quantity = Column(Integer, nullable=True) # Empty means not counted
 
 
 class Order(Base):

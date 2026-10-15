@@ -22,7 +22,9 @@ npm run dev
 
 Then open http://localhost:5173.
 
-The frontend uses the API at http://127.0.0.1:8000. To use another address, set `VITE_API_URL`, for example `VITE_API_URL=http://127.0.0.1:9000 npm run dev`.
+The frontend uses the API at http://127.0.0.1:8000/api. To use another address, set `VITE_API_URL`, for example `VITE_API_URL=http://127.0.0.1:9000/api npm run dev`.
+
+Run tests with `npm test`. They cover the cart, checkout and API helpers, using a mocked API.
 
 ## Docker
 

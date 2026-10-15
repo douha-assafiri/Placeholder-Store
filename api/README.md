@@ -40,7 +40,7 @@ To view FastAPI's auto generated docs:
 ```shell
 uv run uvicorn main:app --reload
 ```
-Then navigate to: http://127.0.0.1:8000/docs
+Then navigate to: http://127.0.0.1:8000/api/docs
 These are Fast API's generated docs on each endpoint
 # Add packages
 This repo uses `uv`pip.
@@ -56,16 +56,18 @@ When you pull run:
 uv run pytest
 ```
 
+`tests/unit` needs no database. `tests/integration` uses SQLite, or MariaDB when `TEST_DB_URL` is set (e.g. `TEST_DB_URL=mysql+pymysql://store:store@127.0.0.1:3306/store uv run pytest tests/integration`).
+
 # File structure
 - `main.py`: creates the FastAPI app and adds the routes
-- `routes/`: endpoints for `accounts`, `orders` and `places`
+- `routes/`: endpoints for `accounts`, `orders`, `places` and `health`, all under `/api`
 - `models.py`: database tables
 - `schemas.py`: request and response models (Pydantic)
 - `database.py`: database connection, set with `DB_URL`
 - `config.py`: reads the environment variables
 - `helpers.py`: shared helpers (database session, JWT login, password hashing)
 - `initial_data.py`: staff account and sample products added on startup
-- `tests/`: pytest tests, with shared fixtures in `conftest.py`
+- `tests/`: pytest tests (`unit/` and `integration/`), with shared fixtures in `conftest.py`
 - `docker/`: Dockerfile and docker-compose file
 
 # Docker

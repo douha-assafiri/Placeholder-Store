@@ -16,23 +16,31 @@ from main import app
 
 # Set the default environment variables for testing
 
+# Set in CI to test on MariaDB
+TEST_DB_URL = os.getenv("TEST_DB_URL")
+
 
 @pytest.fixture
 def db():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False}, # Allow multiple threads to talk to the db for speed
-        poolclass=StaticPool,  # Keeps only one db alive in memory only for speed
-    )
+    if TEST_DB_URL:
+        engine = create_engine(TEST_DB_URL, pool_pre_ping=True)
+    else:
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False}, # Allow multiple threads to talk to the db for speed
+            poolclass=StaticPool,  # Keeps only one db alive in memory only for speed
+        )
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)()
     yield session
     session.close()
+    Base.metadata.drop_all(engine)
+    engine.dispose()
 
 @pytest.fixture
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
-    yield TestClient(app)
+    yield TestClient(app, base_url="http://testserver/api")
     app.dependency_overrides.clear()
 
 
