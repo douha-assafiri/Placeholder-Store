@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript app built with Vite, styled with Tailwind CSS and shadcn/ui components.
 
-Currently, two official plugins are available:
+- `src/pages/`: page components (Home, Browse, Product, Cart, Checkout, Order success, Account, Admin)
+- `src/components/`: shared components (Header, Footer, ProductCard)
+- `src/components/ui/`: shadcn components (added with `npx shadcn@latest add <component>`)
+- `src/context/`: the store (cart, products, orders and the signed in account)
+- `src/lib/`: API, form and shadcn helpers
+- `src/data/`: the `Product` type and price formatting
+- `docker/`: Dockerfile and Nginx config for the production image
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Setup
 
-## React Compiler
+Run each command block from the repo root (`Placeholder-Store/`).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+cd frontend
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Then open http://localhost:5173.
+
+The frontend uses the API at http://127.0.0.1:8000. To use another address, set `VITE_API_URL`, for example `VITE_API_URL=http://127.0.0.1:9000 npm run dev`.
+
+## Docker
+
+If you have Docker installed, you can run the app in containers.
+
+```sh
+docker build -f frontend/docker/Dockerfile -t placeholder-store-frontend frontend
+docker run -p 8080:80 placeholder-store-frontend
+```
+
+Then open http://localhost:8080. To point the image at another API, add `--build-arg VITE_API_URL=<api address>` to `docker build`.
+
+See the [root README](../README.md) for full setup.

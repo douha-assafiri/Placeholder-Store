@@ -1,4 +1,4 @@
-import {BrowserRouter,Routes,Route,Navigate} from 'react-router-dom'
+import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom'
 import {StoreProvider} from './context/StoreContext'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -11,4 +11,14 @@ import AccountPage from './pages/AccountPage'
 import AdminPage from './pages/AdminPage'
 import OrderSuccessPage from './pages/OrderSuccessPage'
 import './store.css'
-export default function App(){return <BrowserRouter><StoreProvider><Header/><Routes><Route path="/" element={<HomePage/>}/><Route path="/shop" element={<BrowsePage/>}/><Route path="/product/:id" element={<ProductPage/>}/><Route path="/cart" element={<CartPage/>}/><Route path="/checkout" element={<CheckoutPage/>}/><Route path="/account" element={<AccountPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route path="/order-success/:id" element={<OrderSuccessPage/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes><Footer/></StoreProvider></BrowserRouter>}
+
+export default function App() {
+    return <BrowserRouter><StoreProvider><Header/><Routes><Route path="/" element={<HomePage/>}/><Route path="/shop"
+                                                                                                        element={
+                                                                                                            <BrowsePage/>}/><Route
+        path="/product/:id" element={<ProductPage/>}/><Route path="/cart" element={<CartPage/>}/><Route path="/checkout"
+                                                                                                        element={
+                                                                                                            <CheckoutPage/>}/><Route
+        path="/account" element={<AccountPage/>}/><Route path="/admin" element={<AdminPage/>}/><Route
+        path="/order-success/:id" element={<OrderSuccessPage/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes><Footer/></StoreProvider></BrowserRouter>
+}

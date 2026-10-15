@@ -1,16 +1,16 @@
 import logging
+from typing import Annotated
 from datetime import datetime, timedelta, timezone
 
 import argon2
 import jwt
 from argon2.exceptions import VerifyMismatchError
 from fastapi import Depends, Header, HTTPException
-from fastapi import status
 from sqlalchemy.orm import Session
 
 from config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION
 from database import LocalSession
-from models import User, Roles, InvalidJWTs, Place
+from models import User, Roles, InvalidJWTs
 
 hasher = argon2.PasswordHasher()
 logger = logging.getLogger("api")
@@ -24,6 +24,10 @@ def get_db():
         db.close()
 
 
+# Route parameter shortcuts
+DB = Annotated[Session, Depends(get_db)]
+
+
 # JWT Explained: https://www.geeksforgeeks.org/web-tech/json-web-token-jwt/
 def create_jwt(ident: int) -> str:
     payload = {
@@ -34,7 +38,7 @@ def create_jwt(ident: int) -> str:
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)  # Encoded into base64 HS256
 
 
-def is_invalid_jwt(token, db: Session = Depends(get_db)) -> bool:
+def is_invalid_jwt(token, db: Session) -> bool:
     if db.query(InvalidJWTs).filter(InvalidJWTs.jwt == token).first() is None:
         return False
     else:
@@ -51,12 +55,12 @@ def get_jwt_expiry(token: str) -> datetime:
     return datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
 
 
-def clean_invalid_jwts(db: Session = Depends(get_db)):
+def clean_invalid_jwts(db: Session):
     db.query(InvalidJWTs).filter(InvalidJWTs.expiry < datetime.now(timezone.utc)).delete(synchronize_session=False)
     db.commit()
 
 
-def get_current_user(authorization: str = Header(...), db: Session = Depends(get_db)) -> User:
+def get_current_user(authorization: Annotated[str, Header()], db: DB) -> User:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid Authorization Header")
     token = authorization.removeprefix("Bearer ")
@@ -76,6 +80,9 @@ def get_current_user(authorization: str = Header(...), db: Session = Depends(get
     return user
 
 
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
 def verify_password(user: User, password: str) -> bool:
     try:
         hasher.verify(user.password, password)
@@ -85,17 +92,11 @@ def verify_password(user: User, password: str) -> bool:
 
 
 # For things that require admin access, acts as middleware basically
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
+def require_admin(current_user: CurrentUser) -> User:
     logger.debug(f"Admin privileges used by: {current_user.email}")
     if current_user.role != Roles.Staff:
         raise HTTPException(status_code=403, detail="You are not an admin :(")
     return current_user
 
-def lookup_price(place_id, db: Session = Depends(get_db)) -> float:
-    price = db.query(Place.price).filter(Place.id == place_id).scalar()
-    if price is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Place not found",
-        )
-    return price
+
+Admin = Annotated[User, Depends(require_admin)]
