@@ -3,7 +3,8 @@ services:
     container_name: api
     volumes:
       - ../dev.sqlite3:/api/dev.sqlite3:z
-    image: docker.io/krakekrake/placeholder-store:backend-latest
+    image: krakekrake/placeholder-store:backend-test
+    pull_policy: never
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
@@ -15,8 +16,9 @@ services:
       - 8000
   frontend:
     container_name: frontend
-    image: docker.io/krakekrake/placeholder-store:frontend-latest
+    image: krakekrake/placeholder-store:frontend-test
+    pull_policy: never
     environment:
-      - API_URL=http://api:/8000
+      API_URL: http://host.docker.internal:8000
     ports:
       - "8080:80"

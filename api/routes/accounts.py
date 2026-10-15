@@ -21,7 +21,7 @@ async def create_account(account: CreateAccount, db: DB):
         email=account.email,
         password=hasher.hash(account.password), # Argon2 automatically applies salt,
         dob=account.dob,
-        role=Roles.Customer
+        role=account.role
     )
     try:
         db.add(new_user)
