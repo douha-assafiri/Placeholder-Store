@@ -6,6 +6,7 @@ if DB_URL in ("sqlite://", "sqlite:///:memory:"):
     # In memory SQLite gives every thread its own empty db, so share one connection between them
     engine = create_engine(DB_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
 else:
-    engine = create_engine(DB_URL)
+    # MariaDB drops idle connections
+    engine = create_engine(DB_URL, pool_pre_ping=True)
 LocalSession = sessionmaker(bind=engine)
 Base = declarative_base()

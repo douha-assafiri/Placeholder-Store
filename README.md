@@ -81,9 +81,13 @@ Run it:
 uv run uvicorn main:app --reload
 ```
 
-API docs: http://127.0.0.1:8000/docs
+API docs: http://127.0.0.1:8000/api/docs
+
+Health check: http://127.0.0.1:8000/api/health
 
 Run tests with `uv run pytest`. Add packages with `uv add <package>` (not pip).
+
+`tests/unit` needs no database. `tests/integration` uses SQLite, or MariaDB when `TEST_DB_URL` is set (e.g. `TEST_DB_URL=mysql+pymysql://store:store@127.0.0.1:3306/store uv run pytest tests/integration`).
 
 When you pull run:
 `uv sync` to updated to the latest dependencies
@@ -98,7 +102,9 @@ npm run dev
 
 Then open http://localhost:5173.
 
-The frontend uses the API at http://127.0.0.1:8000. To use another address, set `VITE_API_URL`, for example `VITE_API_URL=http://127.0.0.1:9000 npm run dev`.
+The frontend uses the API at http://127.0.0.1:8000/api. To use another address, set `VITE_API_URL`, for example `VITE_API_URL=http://127.0.0.1:9000/api npm run dev`.
+
+Run tests with `npm test`. They cover the cart, checkout and API helpers, using a mocked API.
 
 ### End-to-end tests
 
@@ -115,7 +121,7 @@ This runs in Chromium. CI also runs Firefox and WebKit.
 
 The admin test needs the staff account from `api/.env`. Pass the same values, for example `ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=secret123 uv run pytest`, otherwise it is skipped.
 
-The tests use the API at http://127.0.0.1:8000 and the frontend at http://localhost:5173. Set `API_URL` and `FRONTEND_URL` to test other addresses.
+The tests use the API at http://127.0.0.1:8000/api and the frontend at http://localhost:5173. Set `API_URL` and `FRONTEND_URL` to test other addresses.
 
 ## Docker
 
@@ -151,7 +157,7 @@ Then set `DB_URL=mysql+pymysql://store:store@127.0.0.1:3306/store` in `api/.env`
 
 ## CI/CD
 
-- **CI** (`.github/workflows/ci.yml`) runs on every pull request: API lint and tests, frontend lint and build, Playwright tests (customer and staff journeys), and Docker image builds. All checks must pass before merging.
+- **CI** (`.github/workflows/ci.yml`) runs on every pull request: API lint, unit and integration tests (on SQLite and MariaDB), frontend lint, tests and build, Playwright tests (customer and staff journeys), and Docker image builds. All checks must pass before merging.
 - **CD** (`.github/workflows/cd.yml`) runs after CI passes on `main` and pushes both images to Docker Hub.
 
 ## Contributing

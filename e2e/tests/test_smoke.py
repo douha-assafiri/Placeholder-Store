@@ -7,6 +7,6 @@ def test_frontend_loads(page: Page):
 
 
 def test_api_responds(api):
-    response = api.get("/places")
+    response = api.get("places")
     assert response.ok
     assert isinstance(response.json(), list)

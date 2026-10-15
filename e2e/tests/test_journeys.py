@@ -58,9 +58,9 @@ def test_customer_cannot_open_admin(page: Page):
 @needs_admin
 def test_staff_manages_products_and_orders(page: Page, api):
     email = f"order-{uuid.uuid4().hex[:8]}@example.com"
-    api.post("/accounts/create", data={"name": "Buyer", "email": email, "password": "secret123", "dob": "2000-01-01T00:00:00"})
-    token = api.post("/accounts/login", data={"email": email, "password": "secret123"}).json()["token"]
-    order = api.post("/orders", data={"items": [{"place_id": 1, "quantity": 1}]}, headers={"Authorization": f"Bearer {token}"}).json()
+    api.post("accounts/create", data={"name": "Buyer", "email": email, "password": "secret123", "dob": "2000-01-01T00:00:00"})
+    token = api.post("accounts/login", data={"email": email, "password": "secret123"}).json()["token"]
+    order = api.post("orders", data={"items": [{"place_id": 1, "quantity": 1}]}, headers={"Authorization": f"Bearer {token}"}).json()
 
     sign_in(page, ADMIN_EMAIL, ADMIN_PASSWORD)
     page.goto("/admin")

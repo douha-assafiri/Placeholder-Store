@@ -31,8 +31,40 @@ jobs:
         uvx flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude .venv
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         uvx flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude .venv
-    - name: Run Tests
-      run: uv run pytest --cov=. --cov-report=term
+    - name: Run Unit Tests
+      run: uv run pytest tests/unit --cov=. --cov-report=
+    - name: Run Integration Tests
+      run: uv run pytest tests/integration --cov=. --cov-append --cov-report=term
+
+  api-mariadb:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-root
+          MARIADB_DATABASE: store_test
+          MARIADB_USER: store
+          MARIADB_PASSWORD: ci-only-store
+        ports: [ "3306:3306" ]
+        options: --health-cmd "healthcheck.sh --connect --innodb_initialized" --health-interval 5s --health-timeout 5s --health-retries 20
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+    - name: Install Python and Dependencies
+      run: |
+        uv python install
+        uv sync --locked --dev
+    - name: Run Integration Tests on MariaDB
+      env:
+        TEST_DB_URL: mysql+pymysql://store:ci-only-store@127.0.0.1:3306/store_test
+      run: uv run pytest tests/integration
 
   frontend:
     runs-on: ubuntu-latest
@@ -54,13 +86,14 @@ jobs:
         cache-dependency-path: frontend/package-lock.json
     - run: npm ci
     - run: npm run lint
+    - run: npm test
     - run: npm run build
 
   e2e:
     runs-on: ubuntu-latest
     env:
       FRONTEND_URL: http://localhost:4173
-      API_URL: http://127.0.0.1:8000
+      API_URL: http://127.0.0.1:8000/api
       ADMIN_EMAIL: admin@ci.test # For the admin journey test
       ADMIN_PASSWORD: ci-only-not-a-real-password
 
@@ -107,7 +140,7 @@ jobs:
       run: uv run pytest -v --browser chromium --browser firefox --browser webkit
 
   docker:
-    needs: [ api, frontend, e2e ] # Makes passing tests a requirement
+    needs: [ api, api-mariadb, frontend, e2e ] # Makes passing tests a requirement
     runs-on: ubuntu-latest
 
     steps:
