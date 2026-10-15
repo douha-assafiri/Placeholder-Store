@@ -1,9 +1,6 @@
 services:
   api:
-    container_name: login-api
-    build:
-      context: ../
-      dockerfile: docker/Dockerfile
+    container_name: api
     volumes:
       - ../dev.sqlite3:/api/dev.sqlite3:z
     image: docker.io/krakekrake/placeholder-store:backend-latest
@@ -14,5 +11,12 @@ services:
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION=3600
       - DB_URL=sqlite:////api/dev.sqlite3 # Temporary sqlite file, swap for the real database URL later
+    expose:
+      - 8000
+  frontend:
+    container_name: frontend
+    image: docker.io/krakekrake/placeholder-store:frontend-latest
+    environment:
+      - API_URL=http://api:/8000
     ports:
-      - "8000:8000"
+      - "8080:80"
