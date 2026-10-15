@@ -56,3 +56,14 @@ def test_logout_other_user(client, customer, staff):
     other_token = other_headers["Authorization"].removeprefix("Bearer ")
     client.post("/accounts/logout", headers=auth(customer), params={"token": other_token})
     assert client.get("/accounts/me", headers=other_headers).status_code == 200
+
+def test_update_account_without_password(client, customer):
+    response = client.patch("/accounts/me", headers=auth(customer), json={
+        "name": "New Name", "email": customer.email, "dob": "2000-01-01T00:00:00"})
+    assert response.status_code == 204
+    assert client.get("/accounts/me", headers=auth(customer)).json()["name"] == "New Name"
+
+def test_update_account_taken_email(client, customer, staff):
+    response = client.patch("/accounts/me", headers=auth(customer), json={
+        "name": "Test", "email": staff.email, "dob": "2000-01-01T00:00:00"})
+    assert response.status_code == 409

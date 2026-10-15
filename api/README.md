@@ -1,3 +1,40 @@
+# Setup
+Run each command block from the repo root (`Placeholder-Store/`).
+
+```sh
+cd api
+uv sync
+```
+
+Create `api/.env` with a random secret (run inside `api/`):
+
+macOS / Linux:
+
+```sh
+cat > .env <<EOF
+JWT_SECRET=$(openssl rand -hex 32)
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION=1
+EOF
+```
+
+Windows (PowerShell):
+
+```powershell
+@"
+JWT_SECRET=$([guid]::NewGuid().ToString('N'))$([guid]::NewGuid().ToString('N'))
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION=1
+"@ | Set-Content -Encoding ascii .env
+```
+
+Optional settings for `api/.env`:
+
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD`: creates a staff account when the API starts, for the admin dashboard.
+- `DB_URL`: the database. Without it, the API uses an in-memory SQLite database that resets when the API restarts. Use `sqlite:///dev.sqlite3` to keep data in a file, or `mysql+pymysql://store:store@127.0.0.1:3306/store` for MariaDB (see [Docker](#docker)).
+
+The API starts with 8 sample products.
+
 # API Spec
 To view FastAPI's auto generated docs:
 ```shell
@@ -13,3 +50,42 @@ This adds dependencies to the pyproject.toml
 
 When you pull run:
 `uv sync` to updated to the latest dependencies
+
+# Run tests
+```shell
+uv run pytest
+```
+
+# File structure
+- `main.py`: creates the FastAPI app and adds the routes
+- `routes/`: endpoints for `accounts`, `orders` and `places`
+- `models.py`: database tables
+- `schemas.py`: request and response models (Pydantic)
+- `database.py`: database connection, set with `DB_URL`
+- `config.py`: reads the environment variables
+- `helpers.py`: shared helpers (database session, JWT login, password hashing)
+- `initial_data.py`: staff account and sample products added on startup
+- `tests/`: pytest tests, with shared fixtures in `conftest.py`
+- `docker/`: Dockerfile and docker-compose file
+
+# Docker
+If you have Docker installed, you can run the app in containers.
+
+```sh
+cd api
+touch dev.sqlite3
+cd docker
+JWT_SECRET=$(openssl rand -hex 32) docker compose up --build
+```
+
+On Windows, run this in Git Bash. To also create a staff account, add `ADMIN_EMAIL` and `ADMIN_PASSWORD` before `docker compose`.
+
+MariaDB:
+
+```sh
+docker run -d --name store-db -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=store -e MARIADB_USER=store -e MARIADB_PASSWORD=store mariadb:11
+```
+
+Then set `DB_URL=mysql+pymysql://store:store@127.0.0.1:3306/store` in `api/.env`.
+
+See the [root README](../README.md) for full setup.

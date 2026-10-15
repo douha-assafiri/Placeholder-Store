@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Set with --build-arg VITE_API_URL=<api address>
+ARG VITE_API_URL
 RUN npm run build
 
 FROM nginx:1.31-alpine

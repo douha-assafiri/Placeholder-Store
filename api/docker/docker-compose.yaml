@@ -9,6 +9,8 @@ services:
     image: docker.io/krakekrake/placeholder-store:backend-latest
     environment:
       - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - JWT_ALGORITHM=HS256
       - JWT_EXPIRATION=3600
       - DB_URL=sqlite:////api/dev.sqlite3 # Temporary sqlite file, swap for the real database URL later
