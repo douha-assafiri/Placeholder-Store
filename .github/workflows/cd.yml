@@ -28,7 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
-      frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-${{ steps.sha.outputs.short }}
+      staging_frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-staging-${{ steps.sha.outputs.short }}
+      production_frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-production-${{ steps.sha.outputs.short }}
 
     steps:
     - uses: actions/checkout@v7
@@ -63,24 +64,44 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha,scope=api
-    - name: Tag frontend Image
-      id: meta-frontend
+    - name: Tag staging frontend image
+      id: meta-frontend-staging
       uses: docker/metadata-action@v6
       with:
         images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
         tags: |
-          type=raw,value=frontend-latest
-          type=raw,value=frontend-${{ steps.sha.outputs.short }}
-    - name: Build the frontend Docker and push
+          type=raw,value=frontend-staging-latest
+          type=raw,value=frontend-staging-${{ steps.sha.outputs.short }}
+    - name: Build and push staging frontend image
       uses: docker/build-push-action@v7
       with:
         context: frontend
         file: frontend/docker/Dockerfile
         push: true
-        tags: ${{ steps.meta-frontend.outputs.tags }}
-        labels: ${{ steps.meta-frontend.outputs.labels }}
-        cache-from: type=gha,scope=frontend
-        build-args: VITE_API_URL=/api
+        tags: ${{ steps.meta-frontend-staging.outputs.tags }}
+        labels: ${{ steps.meta-frontend-staging.outputs.labels }}
+        cache-from: type=gha,scope=frontend-staging
+        cache-to: type=gha,mode=max,scope=frontend-staging
+        build-args: VITE_API_URL=https://staging-api.placeholder-store.site
+    - name: Tag production frontend image
+      id: meta-frontend-production
+      uses: docker/metadata-action@v6
+      with:
+        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
+        tags: |
+          type=raw,value=frontend-production-latest
+          type=raw,value=frontend-production-${{ steps.sha.outputs.short }}
+    - name: Build and push production frontend image
+      uses: docker/build-push-action@v7
+      with:
+        context: frontend
+        file: frontend/docker/Dockerfile
+        push: true
+        tags: ${{ steps.meta-frontend-production.outputs.tags }}
+        labels: ${{ steps.meta-frontend-production.outputs.labels }}
+        cache-from: type=gha,scope=frontend-production
+        cache-to: type=gha,mode=max,scope=frontend-production
+        build-args: VITE_API_URL=https://api.placeholder-store.site
 
   # TODO (1/3): uncomment once AWS is set up
   # deploy-staging:
@@ -120,7 +141,7 @@ jobs:
   #     with:
   #       task-definition: ${{ env.FRONTEND_TASK_STAGING }}
   #       container-name: frontend
-  #       image: ${{ needs.push.outputs.frontend_image }}
+  #       image: ${{ needs.push.outputs.staging_frontend_image }}
   #   - name: Deploy the frontend
   #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
   #     with:
@@ -192,7 +213,7 @@ jobs:
   #     with:
   #       task-definition: ${{ env.FRONTEND_TASK_PRODUCTION }}
   #       container-name: frontend
-  #       image: ${{ needs.push.outputs.frontend_image }}
+  #       image: ${{ needs.push.outputs.production_frontend_image }}
   #   - name: Deploy the frontend
   #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
   #     with:
