@@ -9,7 +9,7 @@ class CreateAccount(BaseModel):
     email: str
     password: str
     dob: datetime
-    role: Roles
+    role: Roles = Roles.Customer
 
 
 class AccountResponse(BaseModel):
