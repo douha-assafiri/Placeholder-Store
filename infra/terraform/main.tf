@@ -329,7 +329,7 @@ resource "aws_ecs_task_definition" "frontend" {
         awslogs-stream-prefix = "frontend"
       }
     }
-    environment = [{ name = "API_URL", value = "http://placeholder-store-api.invalid" }]
+    environment = [{ name = "API_URL", value = "http://${aws_lb.this.dns_name}" }]
   }])
 }
 
