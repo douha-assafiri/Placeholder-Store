@@ -64,7 +64,7 @@ describe('api', () => {
         respond({})
         await api('/orders', { method: 'POST', token: 'abc', body: { items: [] } })
         const [url, options] = vi.mocked(fetch).mock.calls[0]
-        expect(url).toBe('http://127.0.0.1:8000/api/orders')
+        expect(url).toBe('/api/orders')
         expect(options).toMatchObject({
             method: 'POST',
             headers: { Authorization: 'Bearer abc', 'Content-Type': 'application/json' },

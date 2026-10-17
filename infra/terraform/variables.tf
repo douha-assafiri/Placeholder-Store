@@ -44,10 +44,6 @@ variable "frontend_host" {
   type = string
 }
 
-variable "api_host" {
-  type = string
-}
-
 variable "uptime_host" {
   type = string
 }

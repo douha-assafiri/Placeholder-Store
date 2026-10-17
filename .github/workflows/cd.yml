@@ -82,7 +82,6 @@ jobs:
         labels: ${{ steps.meta-frontend-staging.outputs.labels }}
         cache-from: type=gha,scope=frontend-staging
         cache-to: type=gha,mode=max,scope=frontend-staging
-        build-args: VITE_API_URL=https://staging-api.placeholder-store.site
     - name: Tag production frontend image
       id: meta-frontend-production
       uses: docker/metadata-action@v6
@@ -101,7 +100,6 @@ jobs:
         labels: ${{ steps.meta-frontend-production.outputs.labels }}
         cache-from: type=gha,scope=frontend-production
         cache-to: type=gha,mode=max,scope=frontend-production
-        build-args: VITE_API_URL=https://api.placeholder-store.site
 
   # TODO (1/3): uncomment once AWS is set up
   # deploy-staging:

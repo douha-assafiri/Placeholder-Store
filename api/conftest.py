@@ -40,7 +40,7 @@ def db():
 @pytest.fixture
 def client(db):
     app.dependency_overrides[get_db] = lambda: db
-    yield TestClient(app, base_url="http://testserver/api")
+    yield TestClient(app, base_url="http://testserver/")
     app.dependency_overrides.clear()
 
 

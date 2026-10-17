@@ -14,7 +14,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 function mockApi() {
     const fetchMock = vi.fn(async (url: string, options?: RequestInit) => {
-        const path = url.replace('http://127.0.0.1:8000/api', '')
+        const path = url.replace('/api', '')
         if (path === '/places') return json([lamp, vase])
         if (path === '/accounts/me') return json({ id: 7, name: 'Jo', email: 'jo@test.com', dob: '2000-01-01', role: 'Customer' })
         if (path === '/accounts/me/orders') return json([])

@@ -9,6 +9,8 @@ class CreateAccount(BaseModel):
     email: str
     password: str
     dob: datetime
+    role: Roles = Roles.Customer
+
 
 class AccountResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

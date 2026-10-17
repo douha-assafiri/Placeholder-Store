@@ -329,6 +329,7 @@ resource "aws_ecs_task_definition" "frontend" {
         awslogs-stream-prefix = "frontend"
       }
     }
+    environment = [{ name = "API_URL", value = "http://${aws_lb.this.dns_name}" }]
   }])
 }
 
@@ -404,8 +405,19 @@ resource "aws_lb_listener_rule" "api" {
   }
 
   condition {
-    host_header { values = [var.api_host] }
+      path_pattern {
+        values = ["/api/*"]
+      }
   }
+  transform {
+      type = "url-rewrite"
+      url_rewrite_config {
+        rewrite {
+          regex   = "^/api/(.*)$"
+          replace = "/$1"
+        }
+      }
+    }
 }
 
 resource "aws_lb_listener_rule" "uptime" {

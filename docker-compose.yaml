@@ -1,0 +1,20 @@
+services:
+  api:
+    container_name: Placeholder-Store-API
+    image: krakekrake/placeholder-store:backend-latest
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?Required}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION=3600
+      - DB_URL=sqlite:////api/dev.sqlite3 # Temporary sqlite file, swap for the real database URL later
+    expose:
+        - "8000"
+  frontend:
+    container_name: Placeholder-Store-Web
+    image: krakekrake/placeholder-store:frontend-production-latest
+    environment:
+      - API_URL=http://api:8000 # Change this if not running the API from on the same docker network
+    ports:
+      - "8080:80"

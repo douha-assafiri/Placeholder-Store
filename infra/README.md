@@ -74,7 +74,6 @@ environment    = "production"
 api_image      = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:backend-COMMIT_SHA"
 frontend_image = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:frontend-production-COMMIT_SHA"
 frontend_host  = "store.placeholder-store.site"
-api_host       = "api.placeholder-store.site"
 uptime_host    = "monitor.placeholder-store.site"
 ```
 

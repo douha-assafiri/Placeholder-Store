@@ -3,7 +3,7 @@ output "frontend_url" {
 }
 
 output "api_health_url" {
-  value = "https://${var.api_host}/health/ready"
+  value = "https://${var.frontend_host}/api/health/ready"
 }
 
 output "uptime_kuma_url" {
