@@ -1,9 +1,9 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from database import Base, engine, LocalSession
 from initial_data import add_initial_data
 from routes import accounts, health, orders, places
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(engine)
 with LocalSession() as db:
