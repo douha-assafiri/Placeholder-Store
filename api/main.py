@@ -9,7 +9,7 @@ Base.metadata.create_all(engine)
 with LocalSession() as db:
     add_initial_data(db)
 
-# For the load balancer's /api rule
+# Proxy strips /api
 app = FastAPI(docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json")
 
 # Type checker did not like this here, it *is* correct

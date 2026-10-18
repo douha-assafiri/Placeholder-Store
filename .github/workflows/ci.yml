@@ -89,6 +89,19 @@ jobs:
     - run: npm test
     - run: npm run build
 
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: hashicorp/setup-terraform@v3
+    - run: terraform fmt -check -recursive
+    - run: terraform init -backend=false # Skip S3 state
+    - run: terraform validate
+
   e2e:
     runs-on: ubuntu-latest
     env:
@@ -138,7 +151,7 @@ jobs:
       run: uv run pytest -v --browser chromium --browser firefox --browser webkit
 
   docker:
-    needs: [ api, api-mariadb, frontend, e2e ] # Makes passing tests a requirement
+    needs: [ api, api-mariadb, frontend, terraform, e2e ] # Makes passing tests a requirement
     runs-on: ubuntu-latest
 
     steps:
