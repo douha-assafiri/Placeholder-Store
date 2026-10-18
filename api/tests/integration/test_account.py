@@ -67,3 +67,16 @@ def test_update_account_taken_email(client, customer, staff):
     response = client.patch("/accounts/me", headers=auth(customer), json={
         "name": "Test", "email": staff.email, "dob": "2000-01-01T00:00:00"})
     assert response.status_code == 409
+
+def test_register_as_staff(client):
+    client.post("/accounts/create", json={
+        "name": "Sam Staff", "email": "sam@staff.com", "password": "secret123",
+        "dob": "2000-01-01T00:00:00", "role": "Staff"})
+    token = client.post("/accounts/login", json={"email": "sam@staff.com", "password": "secret123"}).json()["token"]
+    assert client.get("/accounts/me", headers={"Authorization": f"Bearer {token}"}).json()["role"] == "Staff"
+
+def test_register_defaults_to_customer(client):
+    client.post("/accounts/create", json={
+        "name": "Jo", "email": "jo@test.com", "password": "secret123", "dob": "2000-01-01T00:00:00"})
+    token = client.post("/accounts/login", json={"email": "jo@test.com", "password": "secret123"}).json()["token"]
+    assert client.get("/accounts/me", headers={"Authorization": f"Bearer {token}"}).json()["role"] == "Customer"

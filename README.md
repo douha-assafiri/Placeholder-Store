@@ -70,10 +70,9 @@ JWT_EXPIRATION=1
 
 Optional settings for `api/.env`:
 
-- `ADMIN_EMAIL` and `ADMIN_PASSWORD`: creates a staff account when the API starts, for the admin dashboard.
 - `DB_URL`: the database. Without it, the API uses an in-memory SQLite database that resets when the API restarts. Use `sqlite:///dev.sqlite3` to keep data in a file, or `mysql+pymysql://store:store@127.0.0.1:3306/store` for MariaDB (see [Docker](#docker)).
 
-The API starts with 8 sample products.
+The API starts with 8 sample products. To use the admin dashboard, register with the account type Staff.
 
 Run it:
 
@@ -81,9 +80,9 @@ Run it:
 uv run uvicorn main:app --reload
 ```
 
-API docs: http://127.0.0.1:8000/api/docs
+API docs: http://127.0.0.1:8000/docs
 
-Health check: http://127.0.0.1:8000/api/health
+Health check: http://127.0.0.1:8000/health
 
 Run tests with `uv run pytest`. Add packages with `uv add <package>` (not pip).
 
@@ -119,33 +118,19 @@ uv run pytest
 
 This runs in Chromium. CI also runs Firefox and WebKit.
 
-The admin test needs the staff account from `api/.env`. Pass the same values, for example `ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=secret123 uv run pytest`, otherwise it is skipped.
-
-The tests use the API at http://127.0.0.1:8000/api and the frontend at http://localhost:5173. Set `API_URL` and `FRONTEND_URL` to test other addresses.
+The tests use the API at http://127.0.0.1:8000 and the frontend at http://localhost:5173. Set `API_URL` and `FRONTEND_URL` to test other addresses.
 
 ## Docker
 
 If you have Docker installed, you can run the app in containers.
 
-API:
+From the repo root:
 
 ```sh
-cd api
-touch dev.sqlite3
-cd docker
 JWT_SECRET=$(openssl rand -hex 32) docker compose up --build
 ```
 
-On Windows, run this in Git Bash. To also create a staff account, add `ADMIN_EMAIL` and `ADMIN_PASSWORD` before `docker compose`.
-
-Frontend:
-
-```sh
-docker build -f frontend/docker/Dockerfile -t placeholder-store-frontend frontend
-docker run -p 8080:80 placeholder-store-frontend
-```
-
-Then open http://localhost:8080. To point the image at another API, add `--build-arg VITE_API_URL=<api address>` to `docker build`.
+On Windows, run this in Git Bash. Then open http://localhost:8080. Nginx in the frontend container forwards `/api` to the API.
 
 MariaDB:
 

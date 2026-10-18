@@ -1,8 +1,7 @@
 from sqlalchemy.orm import Session
 
-from config import ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME
-from helpers import hasher, logger
-from models import User, Roles, Place
+from helpers import logger
+from models import Place
 
 SAMPLE_PLACES = [
     {"name": "Studio Wireless Headphones", "category": "Electronics", "price": 149, "old_price": 199, "rating": 4.8, "tag": "Bestseller", "quantity": 18,
@@ -34,9 +33,6 @@ SAMPLE_PLACES = [
 
 # Only adds what's missing
 def add_initial_data(db: Session):
-    if ADMIN_EMAIL and ADMIN_PASSWORD and db.query(User).filter(User.role == Roles.Staff).first() is None:
-        db.add(User(name=ADMIN_NAME, email=ADMIN_EMAIL, password=hasher.hash(ADMIN_PASSWORD), role=Roles.Staff))
-        logger.info(f"Created staff account: {ADMIN_EMAIL}")
     if db.query(Place).first() is None:
         db.add_all(Place(stock=place["quantity"] > 0, **place) for place in SAMPLE_PLACES)
         logger.info(f"Added {len(SAMPLE_PLACES)} sample places")

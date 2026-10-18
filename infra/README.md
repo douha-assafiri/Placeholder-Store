@@ -88,12 +88,7 @@ aws configure
 $env:AWS_PROFILE = "your-aws-profile"
 ```
 
-The frontend images must be built with the matching API hostname embedded:
-
-- Staging: `https://staging-api.placeholder-store.site`
-- Production: `https://api.placeholder-store.site`
-
-The CD workflow publishes separate frontend image tags for these builds.
+The frontend calls the API at `/api` on its own domain. The load balancer sends `/api/*` to the API and strips the prefix.
 
 ## Terraform commands
 

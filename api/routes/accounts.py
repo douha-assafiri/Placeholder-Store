@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 
 from helpers import DB, CurrentUser, create_jwt, hasher, verify_password, get_jwt_expiry, clean_invalid_jwts, \
     logger
-from models import User, Roles, InvalidJWTs, Order
+from models import User, InvalidJWTs, Order
 from schemas import CreateAccount, AccountResponse, AccountUpdate, LoginRequest, LoginResponse, PasswordUpdate, OrderResponse
 
 router = APIRouter(
