@@ -405,19 +405,19 @@ resource "aws_lb_listener_rule" "api" {
   }
 
   condition {
-      path_pattern {
-        values = ["/api/*"]
-      }
+    path_pattern {
+      values = ["/api/*"]
+    }
   }
   transform {
-      type = "url-rewrite"
-      url_rewrite_config {
-        rewrite {
-          regex   = "^/api/(.*)$"
-          replace = "/$1"
-        }
+    type = "url-rewrite"
+    url_rewrite_config {
+      rewrite {
+        regex   = "^/api/(.*)$"
+        replace = "/$1"
       }
     }
+  }
 }
 
 resource "aws_lb_listener_rule" "uptime" {
@@ -456,6 +456,11 @@ resource "aws_ecs_service" "api" {
     container_port   = 8000
   }
 
+  # CD deploys new images
+  lifecycle {
+    ignore_changes = [task_definition]
+  }
+
   depends_on = [aws_lb_listener.https]
 }
 
@@ -476,6 +481,11 @@ resource "aws_ecs_service" "frontend" {
     target_group_arn = aws_lb_target_group.frontend.arn
     container_name   = "frontend"
     container_port   = 80
+  }
+
+  # CD deploys new images
+  lifecycle {
+    ignore_changes = [task_definition]
   }
 }
 

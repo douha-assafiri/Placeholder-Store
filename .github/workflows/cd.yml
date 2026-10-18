@@ -9,27 +9,13 @@ on:
 permissions:
   contents: read
 
-env:
-  AWS_REGION: ap-southeast-2
-  API_TASK_STAGING: .aws/task-definition-api-staging.json
-  API_TASK_PRODUCTION: .aws/task-definition-api-production.json
-  FRONTEND_TASK_STAGING: .aws/task-definition-frontend-staging.json
-  FRONTEND_TASK_PRODUCTION: .aws/task-definition-frontend-production.json
-  # TODO: fill in once AWS is set up
-  # ECS_CLUSTER: ps-cluster
-  # API_SERVICE_STAGING: ps-api-staging
-  # FRONTEND_SERVICE_STAGING: ps-frontend-staging
-  # API_SERVICE_PRODUCTION: ps-api-prod
-  # FRONTEND_SERVICE_PRODUCTION: ps-frontend-prod
-
 jobs:
   push:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' # Only on a push not on all PRs
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
-      staging_frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-staging-${{ steps.sha.outputs.short }}
-      production_frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-production-${{ steps.sha.outputs.short }}
+      api_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
+      frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-${{ steps.sha.outputs.short }}
 
     steps:
     - uses: actions/checkout@v7
@@ -64,156 +50,64 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha,scope=api
-    - name: Tag staging frontend image
-      id: meta-frontend-staging
+    # Same image for staging and production, the API is always at /api
+    - name: Tag frontend image
+      id: meta-frontend
       uses: docker/metadata-action@v6
       with:
         images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
         tags: |
-          type=raw,value=frontend-staging-latest
-          type=raw,value=frontend-staging-${{ steps.sha.outputs.short }}
-    - name: Build and push staging frontend image
+          type=raw,value=frontend-latest
+          type=raw,value=frontend-${{ steps.sha.outputs.short }}
+    - name: Build and push frontend image
       uses: docker/build-push-action@v7
       with:
         context: frontend
         file: frontend/docker/Dockerfile
         push: true
-        tags: ${{ steps.meta-frontend-staging.outputs.tags }}
-        labels: ${{ steps.meta-frontend-staging.outputs.labels }}
-        cache-from: type=gha,scope=frontend-staging
-        cache-to: type=gha,mode=max,scope=frontend-staging
-    - name: Tag production frontend image
-      id: meta-frontend-production
-      uses: docker/metadata-action@v6
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+        cache-from: type=gha,scope=frontend
+
+  # TODO: set the AWS_DEPLOY_ENABLED repo variable to true once Terraform has run
+  deploy-staging:
+    needs: push
+    if: vars.AWS_DEPLOY_ENABLED == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: staging
+      api_image: ${{ needs.push.outputs.api_image }}
+      frontend_image: ${{ needs.push.outputs.frontend_image }}
+    secrets: inherit
+
+  e2e:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+    - uses: actions/checkout@v7
       with:
-        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
-        tags: |
-          type=raw,value=frontend-production-latest
-          type=raw,value=frontend-production-${{ steps.sha.outputs.short }}
-    - name: Build and push production frontend image
-      uses: docker/build-push-action@v7
-      with:
-        context: frontend
-        file: frontend/docker/Dockerfile
-        push: true
-        tags: ${{ steps.meta-frontend-production.outputs.tags }}
-        labels: ${{ steps.meta-frontend-production.outputs.labels }}
-        cache-from: type=gha,scope=frontend-production
-        cache-to: type=gha,mode=max,scope=frontend-production
+        ref: ${{ github.event.workflow_run.head_sha }}
+    - uses: astral-sh/setup-uv@v7
+    - name: Install Playwright browsers
+      working-directory: e2e
+      run: |
+        uv sync --locked
+        uv run playwright install --with-deps chromium firefox webkit
+    - name: Run E2E tests against staging
+      working-directory: e2e
+      env:
+        FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        API_URL: ${{ vars.FRONTEND_URL }}/api
+      run: uv run pytest -v --browser chromium --browser firefox --browser webkit
 
-  # TODO (1/3): uncomment once AWS is set up
-  # deploy-staging:
-  #   needs: push
-  #   runs-on: ubuntu-latest
-  #   environment: staging
-  #
-  #   steps:
-  #   - uses: actions/checkout@v7
-  #     with:
-  #       ref: ${{ github.event.workflow_run.head_sha }}
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v6
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ${{ env.AWS_REGION }}
-  #   - name: Fill in the AWS account ID
-  #     run: sed -i "s/AWS_ACCOUNT_ID/${{ secrets.AWS_ACCOUNT_ID }}/g" ${{ env.API_TASK_STAGING }} ${{ env.FRONTEND_TASK_STAGING }}
-  #   - name: Fill in the new API image
-  #     id: api-task
-  #     uses: aws-actions/amazon-ecs-render-task-definition@v1
-  #     with:
-  #       task-definition: ${{ env.API_TASK_STAGING }}
-  #       container-name: api
-  #       image: ${{ needs.push.outputs.image }}
-  #   - name: Deploy the API
-  #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-  #     with:
-  #       task-definition: ${{ steps.api-task.outputs.task-definition }}
-  #       service: ${{ env.API_SERVICE_STAGING }}
-  #       cluster: ${{ env.ECS_CLUSTER }}
-  #       wait-for-service-stability: true
-  #   - name: Fill in the new frontend image
-  #     id: frontend-task
-  #     uses: aws-actions/amazon-ecs-render-task-definition@v1
-  #     with:
-  #       task-definition: ${{ env.FRONTEND_TASK_STAGING }}
-  #       container-name: frontend
-  #       image: ${{ needs.push.outputs.staging_frontend_image }}
-  #   - name: Deploy the frontend
-  #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-  #     with:
-  #       task-definition: ${{ steps.frontend-task.outputs.task-definition }}
-  #       service: ${{ env.FRONTEND_SERVICE_STAGING }}
-  #       cluster: ${{ env.ECS_CLUSTER }}
-  #       wait-for-service-stability: true
-
-  # TODO (2/3): uncomment once AWS is set up
-  # e2e:
-  #   needs: deploy-staging
-  #   runs-on: ubuntu-latest
-  #   environment: staging
-  #
-  #   steps:
-  #   - uses: actions/checkout@v7
-  #     with:
-  #       ref: ${{ github.event.workflow_run.head_sha }}
-  #   - uses: astral-sh/setup-uv@v7
-  #   - name: Install Playwright browsers
-  #     working-directory: e2e
-  #     run: |
-  #       uv sync --locked
-  #       uv run playwright install --with-deps chromium firefox webkit
-  #   - name: Run E2E tests against staging
-  #     working-directory: e2e
-  #     env:
-  #       FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-  #       API_URL: ${{ vars.API_URL }}
-  #     run: uv run pytest -v --browser chromium --browser firefox --browser webkit
-
-  # TODO (3/3): uncomment once AWS is set up
-  # deploy-production:
-  #   needs: [ push, e2e ]
-  #   runs-on: ubuntu-latest
-  #   environment: production
-  #
-  #   steps:
-  #   - uses: actions/checkout@v7
-  #     with:
-  #       ref: ${{ github.event.workflow_run.head_sha }}
-  #   - name: Configure AWS credentials
-  #     uses: aws-actions/configure-aws-credentials@v6
-  #     with:
-  #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #       aws-region: ${{ env.AWS_REGION }}
-  #   - name: Fill in the AWS account ID
-  #     run: sed -i "s/AWS_ACCOUNT_ID/${{ secrets.AWS_ACCOUNT_ID }}/g" ${{ env.API_TASK_PRODUCTION }} ${{ env.FRONTEND_TASK_PRODUCTION }}
-  #   - name: Fill in the new API image
-  #     id: api-task
-  #     uses: aws-actions/amazon-ecs-render-task-definition@v1
-  #     with:
-  #       task-definition: ${{ env.API_TASK_PRODUCTION }}
-  #       container-name: api
-  #       image: ${{ needs.push.outputs.image }}
-  #   - name: Deploy the API
-  #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-  #     with:
-  #       task-definition: ${{ steps.api-task.outputs.task-definition }}
-  #       service: ${{ env.API_SERVICE_PRODUCTION }}
-  #       cluster: ${{ env.ECS_CLUSTER }}
-  #       wait-for-service-stability: true
-  #   - name: Fill in the new frontend image
-  #     id: frontend-task
-  #     uses: aws-actions/amazon-ecs-render-task-definition@v1
-  #     with:
-  #       task-definition: ${{ env.FRONTEND_TASK_PRODUCTION }}
-  #       container-name: frontend
-  #       image: ${{ needs.push.outputs.production_frontend_image }}
-  #   - name: Deploy the frontend
-  #     uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-  #     with:
-  #       task-definition: ${{ steps.frontend-task.outputs.task-definition }}
-  #       service: ${{ env.FRONTEND_SERVICE_PRODUCTION }}
-  #       cluster: ${{ env.ECS_CLUSTER }}
-  #       wait-for-service-stability: true
+  # The same images staging tested
+  deploy-production:
+    needs: [ push, e2e ]
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      api_image: ${{ needs.push.outputs.api_image }}
+      frontend_image: ${{ needs.push.outputs.frontend_image }}
+    secrets: inherit

@@ -1,0 +1,64 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      api_image:
+        type: string
+        required: true
+      frontend_image:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      NAME: placeholder-store-${{ inputs.environment }} # Matches Terraform's local.name
+
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v6
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-southeast-2
+    - name: Get the task definitions Terraform created
+      run: |
+        aws ecs describe-task-definition --task-definition "$NAME-api" --query taskDefinition > api-task.json
+        aws ecs describe-task-definition --task-definition "$NAME-frontend" --query taskDefinition > frontend-task.json
+    - name: Fill in the new API image
+      id: api-task
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: api-task.json
+        container-name: api
+        image: ${{ inputs.api_image }}
+    - name: Deploy the API
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.api-task.outputs.task-definition }}
+        service: ${{ env.NAME }}-api
+        cluster: ${{ env.NAME }}
+        wait-for-service-stability: true
+    - name: Fill in the new frontend image
+      id: frontend-task
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: frontend-task.json
+        container-name: frontend
+        image: ${{ inputs.frontend_image }}
+    - name: Deploy the frontend
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      with:
+        task-definition: ${{ steps.frontend-task.outputs.task-definition }}
+        service: ${{ env.NAME }}-frontend
+        cluster: ${{ env.NAME }}
+        wait-for-service-stability: true

@@ -26,8 +26,8 @@ The deployed hostnames use the purchased `placeholder-store.site` domain:
 
 | Environment | Frontend | API | Uptime Kuma |
 |---|---|---|---|
-| Staging | `staging.placeholder-store.site` | `staging-api.placeholder-store.site` | `staging-monitor.placeholder-store.site` |
-| Production | `store.placeholder-store.site` | `api.placeholder-store.site` | `monitor.placeholder-store.site` |
+| Staging | `staging.placeholder-store.site` | `staging.placeholder-store.site/api` | `staging-monitor.placeholder-store.site` |
+| Production | `store.placeholder-store.site` | `store.placeholder-store.site/api` | `monitor.placeholder-store.site` |
 
 Before the first apply:
 
@@ -67,12 +67,12 @@ Edit the copied file and replace:
 - Hostnames if your DNS names differ.
 - `environment` with `staging` or `production`.
 
-Production must use the production frontend image tag and API hostname:
+Production uses the same images as staging:
 
 ```hcl
 environment    = "production"
 api_image      = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:backend-COMMIT_SHA"
-frontend_image = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:frontend-production-COMMIT_SHA"
+frontend_image = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:frontend-COMMIT_SHA"
 frontend_host  = "store.placeholder-store.site"
 uptime_host    = "monitor.placeholder-store.site"
 ```
@@ -131,7 +131,7 @@ selected environment:
 ```powershell
 .\infra\tests\smoke.ps1 `
   -FrontendUrl "https://staging.placeholder-store.site" `
-  -ApiHealthUrl "https://staging-api.placeholder-store.site/health/ready" `
+  -ApiHealthUrl "https://staging.placeholder-store.site/api/health/ready" `
   -UptimeUrl "https://staging-monitor.placeholder-store.site"
 ```
 
@@ -144,6 +144,11 @@ the real `.tfvars` files, Terraform state, generated plans, database passwords,
 JWT secrets, or AWS credentials. Only `terraform.tfvars.example` is intended
 to be committed.
 
-The `.aws` task-definition JSON files are legacy configuration. Terraform
-manages the active ECS task definitions, so do not deploy the legacy JSON files
-unless the deployment process is intentionally changed later.
+Terraform creates the ECS task definitions and services. After that, CD
+deploys new images by copying the current task definition with the new image
+tag. Terraform ignores `task_definition` changes on the services, so
+`terraform apply` won't roll back a deploy.
+
+CD deploys only when the `AWS_DEPLOY_ENABLED` repo variable is `true`. It
+also needs `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets, and a
+`FRONTEND_URL` variable on the `staging` environment for E2E.
