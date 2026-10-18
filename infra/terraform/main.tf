@@ -639,6 +639,9 @@ resource "aws_ecs_service" "uptime" {
   desired_count   = 1
   launch_type     = "FARGATE"
 
+  deployment_minimum_healthy_percent = 0
+  deployment_maximum_percent         = 100
+
   network_configuration {
     subnets          = local.task_subnets
     security_groups  = [aws_security_group.tasks.id]
