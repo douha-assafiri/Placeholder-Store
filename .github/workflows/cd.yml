@@ -2,86 +2,136 @@ name: CD
 
 on:
   workflow_run:
-    workflows: [ "CI" ]
-    types: [ completed ]
-    branches: [ "main" ]
+    workflows: ["CI"]
+    types: [completed]
+    branches: ["main"]
 
 permissions:
   contents: read
 
+env:
+  AWS_REGION: ap-southeast-2
+  TF_WORKING_DIR: infra/terraform
+
 jobs:
   push:
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' # Only on a push not on all PRs
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     outputs:
-      api_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-${{ steps.sha.outputs.short }}
-      frontend_image: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-${{ steps.sha.outputs.short }}
+      api_image: ${{ steps.images.outputs.api_image }}
+      staging_frontend_image: ${{ steps.images.outputs.staging_frontend_image }}
+      production_frontend_image: ${{ steps.images.outputs.production_frontend_image }}
 
     steps:
-    - uses: actions/checkout@v7
-      with:
-        ref: ${{ github.event.workflow_run.head_sha }} # The commit CI tested
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v4
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v4
-      with:
-        username: ${{ vars.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PAT }}
-    - name: Short commit ID
-      id: sha
-      run: echo "short=${HEAD_SHA::7}" >> "$GITHUB_OUTPUT"
-      env:
-        HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-    - name: Tag Image
-      id: meta
-      uses: docker/metadata-action@v6
-      with:
-        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
-        tags: |
-          type=raw,value=backend-latest
-          type=raw,value=backend-${{ steps.sha.outputs.short }}
-    - name: Build the Docker and push
-      uses: docker/build-push-action@v7
-      with:
-        context: api
-        file: api/docker/Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha,scope=api
-    # Same image for staging and production, the API is always at /api
-    - name: Tag frontend image
-      id: meta-frontend
-      uses: docker/metadata-action@v6
-      with:
-        images: ${{ vars.DOCKERHUB_USERNAME }}/placeholder-store
-        tags: |
-          type=raw,value=frontend-latest
-          type=raw,value=frontend-${{ steps.sha.outputs.short }}
-    - name: Build and push frontend image
-      uses: docker/build-push-action@v7
-      with:
-        context: frontend
-        file: frontend/docker/Dockerfile
-        push: true
-        tags: ${{ steps.meta-frontend.outputs.tags }}
-        labels: ${{ steps.meta-frontend.outputs.labels }}
-        cache-from: type=gha,scope=frontend
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-  # TODO: set the AWS_DEPLOY_ENABLED repo variable to true once Terraform has run
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PAT }}
+
+      - name: Set image tags
+        id: images
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+        run: |
+          SHORT_SHA="${HEAD_SHA::7}"
+          echo "api_image=docker.io/${DOCKERHUB_USERNAME}/placeholder-store:backend-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "staging_frontend_image=docker.io/${DOCKERHUB_USERNAME}/placeholder-store:frontend-staging-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "production_frontend_image=docker.io/${DOCKERHUB_USERNAME}/placeholder-store:frontend-production-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: api
+          file: api/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.images.outputs.api_image }}
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:backend-latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push staging frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.images.outputs.staging_frontend_image }}
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-staging-latest
+          build-args: VITE_API_URL=https://staging-api.placeholder-store.site
+          cache-from: type=gha,scope=frontend-staging
+          cache-to: type=gha,mode=max,scope=frontend-staging
+
+      - name: Build and push production frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.images.outputs.production_frontend_image }}
+            docker.io/${{ vars.DOCKERHUB_USERNAME }}/placeholder-store:frontend-production-latest
+          build-args: VITE_API_URL=https://api.placeholder-store.site
+          cache-from: type=gha,scope=frontend-production
+          cache-to: type=gha,mode=max,scope=frontend-production
+
   deploy-staging:
     permissions:
         contents: read
         id-token: write
     needs: push
-    if: vars.AWS_DEPLOY_ENABLED == 'true'
-    uses: ./.github/workflows/deploy.yml
-    with:
-      environment: staging
-      api_image: ${{ needs.push.outputs.api_image }}
-      frontend_image: ${{ needs.push.outputs.frontend_image }}
-    secrets: inherit
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Initialize staging Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=placeholder-store/staging.tfstate" \
+            -backend-config="region=${AWS_REGION}"
+
+      - name: Apply staging infrastructure
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          API_IMAGE: ${{ needs.push.outputs.api_image }}
+          FRONTEND_IMAGE: ${{ needs.push.outputs.staging_frontend_image }}
+          STAGING_CERTIFICATE_ARN: ${{ vars.STAGING_CERTIFICATE_ARN }}
+        run: |
+          terraform apply -auto-approve \
+            -var="environment=staging" \
+            -var="aws_region=${AWS_REGION}" \
+            -var="api_image=${API_IMAGE}" \
+            -var="frontend_image=${FRONTEND_IMAGE}" \
+            -var="certificate_arn=${STAGING_CERTIFICATE_ARN}" \
+            -var="frontend_host=staging.placeholder-store.site" \
+            -var="api_host=staging-api.placeholder-store.site" \
+            -var="uptime_host=staging-monitor.placeholder-store.site"
 
   e2e:
     needs: deploy-staging
@@ -89,31 +139,69 @@ jobs:
     environment: staging
 
     steps:
-    - uses: actions/checkout@v7
-      with:
-        ref: ${{ github.event.workflow_run.head_sha }}
-    - uses: astral-sh/setup-uv@v7
-    - name: Install Playwright browsers
-      working-directory: e2e
-      run: |
-        uv sync --locked
-        uv run playwright install --with-deps chromium firefox webkit
-    - name: Run E2E tests against staging
-      working-directory: e2e
-      env:
-        FRONTEND_URL: ${{ vars.FRONTEND_URL }}
-        API_URL: ${{ vars.FRONTEND_URL }}/api
-      run: uv run pytest -v --browser chromium --browser firefox --browser webkit
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-  # The same images staging tested
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install Playwright
+        working-directory: e2e
+        run: |
+          uv sync --locked
+          uv run playwright install --with-deps chromium
+
+      - name: Run staging E2E tests
+        working-directory: e2e
+        env:
+          FRONTEND_URL: https://staging.placeholder-store.site
+          API_URL: https://staging-api.placeholder-store.site/api
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: uv run pytest -v --browser chromium
+
   deploy-production:
-    permissions:
-        contents: read
-        id-token: write
-    needs: [ push, e2e ]
-    uses: ./.github/workflows/deploy.yml
-    with:
-      environment: production
-      api_image: ${{ needs.push.outputs.api_image }}
-      frontend_image: ${{ needs.push.outputs.frontend_image }}
-    secrets: inherit
+    needs: [push, e2e]
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Initialize production Terraform state
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+        run: |
+          terraform init -reconfigure \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="key=placeholder-store/production.tfstate" \
+            -backend-config="region=${AWS_REGION}"
+
+      - name: Apply production infrastructure
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          API_IMAGE: ${{ needs.push.outputs.api_image }}
+          FRONTEND_IMAGE: ${{ needs.push.outputs.production_frontend_image }}
+          PRODUCTION_CERTIFICATE_ARN: ${{ vars.PRODUCTION_CERTIFICATE_ARN }}
+        run: |
+          terraform apply -auto-approve \
+            -var="environment=production" \
+            -var="aws_region=${AWS_REGION}" \
+            -var="api_image=${API_IMAGE}" \
+            -var="frontend_image=${FRONTEND_IMAGE}" \
+            -var="certificate_arn=${PRODUCTION_CERTIFICATE_ARN}" \
+            -var="frontend_host=store.placeholder-store.site" \
+            -var="api_host=api.placeholder-store.site" \
+            -var="uptime_host=monitor.placeholder-store.site"
