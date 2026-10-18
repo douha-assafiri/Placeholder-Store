@@ -29,7 +29,6 @@ jobs:
       TF_VAR_environment: ${{ inputs.environment }}
       TF_VAR_api_image: ${{ inputs.api_image }}
       TF_VAR_frontend_image: ${{ inputs.frontend_image }}
-      TF_VAR_certificate_arn: ${{ inputs.environment == 'production' && vars.PRODUCTION_CERTIFICATE_ARN || vars.STAGING_CERTIFICATE_ARN }}
       TF_VAR_frontend_host: ${{ inputs.environment == 'production' && vars.PRODUCTION_FRONTEND_HOST || vars.STAGING_FRONTEND_HOST }}
       TF_VAR_uptime_host: ${{ inputs.environment == 'production' && vars.PRODUCTION_UPTIME_HOST || vars.STAGING_UPTIME_HOST }}
       TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}

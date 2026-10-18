@@ -1,14 +1,13 @@
 # Copy this file to staging.tfvars or production.tfvars.
 # Do not put AWS keys, database passwords, JWT secrets, or Docker Hub tokens here.
 
-environment       = "staging"
-aws_region        = "ap-southeast-2"
-api_image         = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:backend-COMMIT_SHA"
-frontend_image    = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:frontend-COMMIT_SHA"
-certificate_arn   = "arn:aws:acm:ap-southeast-2:AWS_ACCOUNT_ID:certificate/CERTIFICATE_ID"
+environment    = "staging"
+aws_region     = "ap-southeast-2"
+api_image      = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:backend-COMMIT_SHA"
+frontend_image = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:frontend-COMMIT_SHA"
 
 frontend_host = "staging.placeholder-store.site"
 uptime_host   = "staging-monitor.placeholder-store.site"
 
-# Optional; currently reserved for notification configuration.
+# Optional; CloudWatch alarms email this address.
 alert_email = "ops@example.invalid"

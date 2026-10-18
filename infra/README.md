@@ -37,14 +37,14 @@ The deployed hostnames use the purchased `placeholder-store.site` domain:
 | Staging | `staging.placeholder-store.site` | `staging.placeholder-store.site/api` | `staging-monitor.placeholder-store.site` |
 | Production | `store.placeholder-store.site` | `store.placeholder-store.site/api` | `monitor.placeholder-store.site` |
 
-Before the first apply:
+Terraform also handles the domain, using the Route 53 zone in `dns_zone`:
 
-1. Request an ACM certificate in `ap-southeast-2` covering the hostnames for
-   the environment.
-2. Complete ACM DNS validation.
-3. Create DNS records for the hostnames pointing to the Terraform ALB output.
-4. Confirm that the Docker image tags in the selected `.tfvars` file already
-   exist in Docker Hub.
+- An ACM certificate covering the frontend and Uptime Kuma hosts, validated
+  through Route 53.
+- Alias records pointing both hosts at the environment's load balancer.
+
+Before the first apply, confirm that the Docker image tags in the selected
+`.tfvars` file already exist in Docker Hub.
 
 ## Environment variable files
 
@@ -70,8 +70,6 @@ Edit the copied file and replace:
 
 - `YOUR_DOCKERHUB_USERNAME` and `COMMIT_SHA` with an image that exists in
   Docker Hub.
-- `AWS_ACCOUNT_ID` and `CERTIFICATE_ID` with the ACM certificate ARN for the
-  selected environment.
 - Hostnames if your DNS names differ.
 - `environment` with `staging` or `production`.
 
@@ -166,6 +164,5 @@ autoscaling.
 CD runs `.github/workflows/deploy.yml` for staging, then E2E, then production.
 It needs `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets (plus an
 optional `ALERT_EMAIL` secret), and these repo variables: `TF_STATE_BUCKET`,
-`STAGING_CERTIFICATE_ARN`, `PRODUCTION_CERTIFICATE_ARN`,
 `STAGING_FRONTEND_HOST`, `PRODUCTION_FRONTEND_HOST`, `STAGING_UPTIME_HOST`
 and `PRODUCTION_UPTIME_HOST`.

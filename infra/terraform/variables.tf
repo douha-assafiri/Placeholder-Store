@@ -35,14 +35,15 @@ variable "uptime_kuma_image" {
   default = "louislam/uptime-kuma:2"
 }
 
-variable "certificate_arn" {
-  type        = string
-  description = "ACM certificate covering the frontend and API host names."
-}
-
 variable "frontend_host" {
   type        = string
   description = "Frontend DNS hostname served by the ALB."
+}
+
+variable "dns_zone" {
+  type        = string
+  default     = "placeholder-store.site"
+  description = "Route 53 hosted zone the host names live in."
 }
 
 variable "uptime_host" {
