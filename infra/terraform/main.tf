@@ -209,7 +209,7 @@ resource "aws_db_instance" "this" {
   publicly_accessible     = false
   skip_final_snapshot     = !local.is_production
   deletion_protection     = local.is_production
-  backup_retention_period = local.is_production ? 7 : 1
+  backup_retention_period = 0
 }
 
 resource "aws_secretsmanager_secret_version" "database_url" {
