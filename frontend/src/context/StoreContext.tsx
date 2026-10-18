@@ -237,7 +237,7 @@ export function StoreProvider({ children }: Readonly<{ children: ReactNode }>) {
         setToken(result.token)
     }, [])
 
-    const register = useCallback(async (account: { name: string; email: string; password: string; dob: string }) => {
+    const register = useCallback(async (account: { name: string; email: string; password: string; dob: string; role: string }) => {
         await api('/accounts/create', {
             method: 'POST',
             body: { ...account, dob: `${account.dob}T00:00:00` },

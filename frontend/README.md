@@ -32,9 +32,9 @@ If you have Docker installed, you can run the app in containers.
 
 ```sh
 docker build -f frontend/docker/Dockerfile -t placeholder-store-frontend frontend
-docker run -p 8080:80 placeholder-store-frontend
+docker run -p 8080:80 -e API_URL=http://host.docker.internal:8000 placeholder-store-frontend
 ```
 
-Then open http://localhost:8080. To point the image at another API, add `--build-arg VITE_API_URL=<api address>` to `docker build`.
+Then open http://localhost:8080. Nginx forwards `/api` to `API_URL`.
 
 See the [root README](../README.md) for full setup.

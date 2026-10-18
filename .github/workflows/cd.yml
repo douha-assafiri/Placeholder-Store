@@ -169,8 +169,6 @@ jobs:
   #     env:
   #       FRONTEND_URL: ${{ vars.FRONTEND_URL }}
   #       API_URL: ${{ vars.API_URL }}
-  #       ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-  #       ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
   #     run: uv run pytest -v --browser chromium --browser firefox --browser webkit
 
   # TODO (3/3): uncomment once AWS is set up

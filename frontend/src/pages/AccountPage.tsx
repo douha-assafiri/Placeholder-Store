@@ -42,7 +42,7 @@ function SignIn() {
         setMessage('')
         try {
             if (isRegister) {
-                await register({ name: formText(form, 'name'), email, password, dob: formText(form, 'dob') })
+                await register({ name: formText(form, 'name'), email, password, dob: formText(form, 'dob'), role: formText(form, 'role') })
             } else {
                 await login(email, password)
             }
@@ -62,13 +62,14 @@ function SignIn() {
                 <label>Email address<input name="email" required type="email" placeholder="you@example.com" /></label>
                 <label>Password<input name="password" required type="password" minLength={6} placeholder="At least 6 characters" /></label>
                 {isRegister && <label>Date of birth<input name="dob" required type="date" /></label>}
+                {isRegister && <label>Account type<select name="role" defaultValue="Customer"><option value="Customer">Customer</option><option value="Staff">Staff</option></select></label>}
                 <button type="submit" className="btn btn-dark btn-full" disabled={busy}>
                     {isRegister ? 'Create account' : 'Sign in'} <ArrowRight size={18} />
                 </button>
             </form>
             {message && <div className="demo-notice">{message}</div>}
             <p className="account-switch">
-                {isRegister ? 'Already have an account?' : 'New around here?'}
+                {isRegister ? 'Already have an account?' : 'New around here?'}{' '}
                 <button type="button" onClick={() => { setRegister(!isRegister); setMessage('') }}>
                     {isRegister ? 'Sign in' : 'Create an account'}
                 </button>
@@ -146,7 +147,7 @@ function AccountDetails() {
                 <button type="submit" className="btn btn-dark btn-full">Change password</button>
             </form>
 
-            <p className="account-switch">
+            <p className="account-switch account-actions">
                 <button type="button" onClick={() => void run(logout, '')}>Sign out</button>
                 <button type="button" onClick={remove}>Delete account</button>
             </p>

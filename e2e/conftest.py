@@ -4,7 +4,7 @@ import pytest
 
 # Defaults are for running locally, CI and CD point these at the app they're testing
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api")
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 
 @pytest.fixture(scope="session")

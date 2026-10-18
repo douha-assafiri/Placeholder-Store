@@ -94,8 +94,6 @@ jobs:
     env:
       FRONTEND_URL: http://localhost:4173
       API_URL: http://127.0.0.1:8000
-      ADMIN_EMAIL: admin@ci.test # For the admin journey test
-      ADMIN_PASSWORD: ci-only-not-a-real-password
 
     steps:
     - uses: actions/checkout@v7

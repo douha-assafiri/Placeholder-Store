@@ -55,7 +55,7 @@ export type Store = {
     user: Account | null
     isStaff: boolean
     login: (email: string, password: string) => Promise<void>
-    register: (account: { name: string; email: string; password: string; dob: string }) => Promise<void>
+    register: (account: { name: string; email: string; password: string; dob: string; role: string }) => Promise<void>
     logout: () => Promise<void>
     updateProfile: (account: { name: string; email: string; dob: string }) => Promise<void>
     changePassword: (oldPassword: string, newPassword: string) => Promise<void>

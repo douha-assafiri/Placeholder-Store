@@ -1,31 +1,18 @@
-import os
 import uuid
 
-import pytest
 from playwright.sync_api import Page, expect
 
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
-needs_admin = pytest.mark.skipif(not ADMIN_EMAIL or not ADMIN_PASSWORD, reason="ADMIN_EMAIL and ADMIN_PASSWORD not set")
-
-
-def register(page: Page, name: str, email: str, password: str = "secret123"):
+def register(page: Page, name: str, email: str, password: str = "secret123", role: str = "Customer"):
     page.goto("/account")
     page.get_by_role("button", name="Create an account").click()
     page.get_by_label("Full name").fill(name)
     page.get_by_label("Email address").fill(email)
     page.get_by_label("Password").fill(password)
     page.get_by_label("Date of birth").fill("2000-01-01")
+    page.get_by_label("Account type").select_option(role)
     page.get_by_role("button", name="Create account").click()
     expect(page.get_by_role("heading", name=f"Hi, {name}")).to_be_visible()
 
-
-def sign_in(page: Page, email: str, password: str):
-    page.goto("/account")
-    page.get_by_label("Email address").fill(email)
-    page.get_by_label("Password").fill(password)
-    page.get_by_role("button", name="Sign in").click()
-    expect(page.get_by_role("heading", name="Hi,")).to_be_visible()
 
 
 def test_customer_registers_and_orders(page: Page):
@@ -55,14 +42,13 @@ def test_customer_cannot_open_admin(page: Page):
     expect(page.get_by_role("heading", name="Staff only")).to_be_visible()
 
 
-@needs_admin
 def test_staff_manages_products_and_orders(page: Page, api):
     email = f"order-{uuid.uuid4().hex[:8]}@example.com"
     api.post("accounts/create", data={"name": "Buyer", "email": email, "password": "secret123", "dob": "2000-01-01T00:00:00"})
     token = api.post("accounts/login", data={"email": email, "password": "secret123"}).json()["token"]
     order = api.post("orders", data={"items": [{"place_id": 1, "quantity": 1}]}, headers={"Authorization": f"Bearer {token}"}).json()
 
-    sign_in(page, ADMIN_EMAIL, ADMIN_PASSWORD)
+    register(page, "Sam Staff", f"staff-{uuid.uuid4().hex[:8]}@example.com", role="Staff")
     page.goto("/admin")
     expect(page.get_by_role("heading", name="Admin dashboard")).to_be_visible()
 
