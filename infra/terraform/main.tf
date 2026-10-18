@@ -205,7 +205,7 @@ resource "aws_db_instance" "this" {
   password                = random_password.database.result
   db_subnet_group_name    = aws_db_subnet_group.this.name
   vpc_security_group_ids  = [aws_security_group.database.id]
-  multi_az                = local.is_production
+  multi_az                = false
   publicly_accessible     = false
   skip_final_snapshot     = !local.is_production
   deletion_protection     = local.is_production
