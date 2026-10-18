@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# One run at a time
+concurrency:
+  group: cd
+  cancel-in-progress: false
+
 jobs:
   push:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' # Only on a push not on all PRs
