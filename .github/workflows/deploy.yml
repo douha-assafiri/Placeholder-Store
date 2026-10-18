@@ -20,16 +20,47 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
     env:
-      NAME: placeholder-store-${{ inputs.environment }} # Matches Terraform's local.name
+      NAME: placeholder-store-${{ inputs.environment }}
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      TF_VAR_environment: ${{ inputs.environment }}
+      TF_VAR_api_image: ${{ inputs.api_image }}
+      TF_VAR_frontend_image: ${{ inputs.frontend_image }}
+      TF_VAR_certificate_arn: ${{ inputs.environment == 'production' && vars.PRODUCTION_CERTIFICATE_ARN || vars.STAGING_CERTIFICATE_ARN }}
+      TF_VAR_frontend_host: ${{ inputs.environment == 'production' && vars.PRODUCTION_FRONTEND_HOST || vars.STAGING_FRONTEND_HOST }}
+      TF_VAR_uptime_host: ${{ inputs.environment == 'production' && vars.PRODUCTION_UPTIME_HOST || vars.STAGING_UPTIME_HOST }}
 
     steps:
+    - uses: actions/checkout@v7
+      with:
+        ref: ${{ github.event.workflow_run.head_sha }}
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v6
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ap-southeast-2
+
+    # ---- Infrastructure ----
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.11.4
+    - name: Terraform init
+      working-directory: infra/terraform
+      run: |
+        terraform init \
+          -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+          -backend-config="key=placeholder-store/${{ inputs.environment }}.tfstate"
+    - name: Terraform plan
+      working-directory: infra/terraform
+      run: terraform plan -lock-timeout=5m -out=tfplan
+    - name: Terraform apply
+      working-directory: infra/terraform
+      run: terraform apply -lock-timeout=5m tfplan
     - name: Get the task definitions Terraform created
       run: |
         aws ecs describe-task-definition --task-definition "$NAME-api" --query taskDefinition > api-task.json

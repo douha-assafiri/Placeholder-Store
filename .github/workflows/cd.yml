@@ -85,6 +85,9 @@ jobs:
           cache-to: type=gha,mode=max,scope=frontend-production
 
   deploy-staging:
+    permissions:
+        contents: read
+        id-token: write
     needs: push
     runs-on: ubuntu-latest
     environment: staging
