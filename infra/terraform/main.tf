@@ -440,9 +440,10 @@ data "aws_route53_zone" "this" {
 resource "aws_route53_record" "hosts" {
   for_each = toset([var.frontend_host, var.uptime_host])
 
-  zone_id = data.aws_route53_zone.this.zone_id
-  name    = each.value
-  type    = "A"
+  zone_id         = data.aws_route53_zone.this.zone_id
+  name            = each.value
+  type            = "A"
+  allow_overwrite = true # Takes over records made by hand
 
   alias {
     name                   = aws_lb.this.dns_name
