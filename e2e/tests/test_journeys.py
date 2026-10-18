@@ -15,11 +15,11 @@ def register(page: Page, name: str, email: str, password: str = "secret123", rol
 
 
 
-def test_customer_registers_and_orders(page: Page):
+def test_customer_registers_and_orders(page: Page, product):
     register(page, "Jo Customer", f"jo-{uuid.uuid4().hex[:8]}@example.com")
 
     page.goto("/shop")
-    page.get_by_role("button", name="Add Studio Wireless Headphones to cart").click()
+    page.get_by_role("button", name=f"Add {product['name']} to cart").click()
     page.goto("/cart")
     page.get_by_role("link", name="Continue to checkout").click()
 
@@ -42,11 +42,11 @@ def test_customer_cannot_open_admin(page: Page):
     expect(page.get_by_role("heading", name="Staff only")).to_be_visible()
 
 
-def test_staff_manages_products_and_orders(page: Page, api):
+def test_staff_manages_products_and_orders(page: Page, api, product):
     email = f"order-{uuid.uuid4().hex[:8]}@example.com"
     api.post("accounts/create", data={"name": "Buyer", "email": email, "password": "secret123", "dob": "2000-01-01T00:00:00"})
     token = api.post("accounts/login", data={"email": email, "password": "secret123"}).json()["token"]
-    order = api.post("orders", data={"items": [{"place_id": 1, "quantity": 1}]}, headers={"Authorization": f"Bearer {token}"}).json()
+    order = api.post("orders", data={"items": [{"place_id": product["id"], "quantity": 1}]}, headers={"Authorization": f"Bearer {token}"}).json()
 
     register(page, "Sam Staff", f"staff-{uuid.uuid4().hex[:8]}@example.com", role="Staff")
     page.goto("/admin")
