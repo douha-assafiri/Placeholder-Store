@@ -136,8 +136,8 @@ resource "aws_security_group" "database" {
   vpc_id = aws_vpc.this.id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
+    from_port       = 3306
+    to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.tasks.id]
   }
@@ -195,8 +195,8 @@ resource "aws_secretsmanager_secret" "jwt" {
 
 resource "aws_db_instance" "this" {
   identifier              = local.name
-  engine                  = "postgres"
-  engine_version          = "16"
+  engine                  = "mariadb"
+  engine_version          = "11.4"
   instance_class          = var.db_instance_class
   allocated_storage       = 20
   max_allocated_storage   = 100
@@ -214,7 +214,7 @@ resource "aws_db_instance" "this" {
 
 resource "aws_secretsmanager_secret_version" "database_url" {
   secret_id     = aws_secretsmanager_secret.database_url.id
-  secret_string = "postgresql+psycopg://${aws_db_instance.this.username}:${random_password.database.result}@${aws_db_instance.this.address}:${aws_db_instance.this.port}/${aws_db_instance.this.db_name}"
+  secret_string = "mysql+pymysql://${aws_db_instance.this.username}:${random_password.database.result}@${aws_db_instance.this.address}:${aws_db_instance.this.port}/${aws_db_instance.this.db_name}"
 }
 
 resource "aws_secretsmanager_secret_version" "jwt" {

@@ -10,7 +10,7 @@ apply` without selecting an environment variable file.
 
 Each environment contains:
 
-- A dedicated VPC, public ALB, private RDS PostgreSQL, ECS cluster and CloudWatch
+- A dedicated VPC, public ALB, private RDS MariaDB, ECS cluster and CloudWatch
   log groups.
 - Staging: one API task, one frontend task, and one Uptime Kuma task in public
   subnets, with no NAT gateway. EFS mount targets are created in the same
