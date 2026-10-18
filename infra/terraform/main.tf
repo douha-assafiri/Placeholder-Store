@@ -123,6 +123,13 @@ resource "aws_security_group" "tasks" {
     security_groups = [aws_security_group.alb.id]
   }
 
+  ingress {
+    from_port       = 3001
+    to_port         = 3001
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -524,7 +531,11 @@ resource "aws_lb_target_group" "uptime" {
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = aws_vpc.this.id
-  health_check { path = "/" }
+
+  health_check {
+    path    = "/"
+    matcher = "200-399" # Kuma redirects / to the dashboard
+  }
 }
 
 resource "aws_ecs_task_definition" "uptime" {
