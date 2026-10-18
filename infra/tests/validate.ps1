@@ -10,8 +10,8 @@ try {
     if ($example -notmatch 'environment\s+=\s+"(staging|production)"') {
         throw "terraform.tfvars.example must select staging or production."
     }
-    if ($example -notmatch 'certificate_arn') {
-        throw "terraform.tfvars.example must define an ACM certificate."
+    if ($example -notmatch 'frontend_host') {
+        throw "terraform.tfvars.example must define the frontend host."
     }
 }
 finally {

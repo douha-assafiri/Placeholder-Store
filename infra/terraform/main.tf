@@ -393,7 +393,7 @@ resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.this.arn
   port              = 443
   protocol          = "HTTPS"
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = aws_acm_certificate_validation.this.certificate_arn
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
 
   default_action {
@@ -431,6 +431,56 @@ resource "aws_lb_listener_rule" "api" {
       }
     }
   }
+}
+
+data "aws_route53_zone" "this" {
+  name = var.dns_zone
+}
+
+resource "aws_route53_record" "hosts" {
+  for_each = toset([var.frontend_host, var.uptime_host])
+
+  zone_id = data.aws_route53_zone.this.zone_id
+  name    = each.value
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.this.dns_name
+    zone_id                = aws_lb.this.zone_id
+    evaluate_target_health = false
+  }
+}
+
+locals {
+  certificate_validation = {
+    for option in aws_acm_certificate.this.domain_validation_options : option.domain_name => option
+  }
+}
+
+resource "aws_acm_certificate" "this" {
+  domain_name               = var.frontend_host
+  subject_alternative_names = [var.uptime_host]
+  validation_method         = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "certificate_validation" {
+  for_each = toset([var.frontend_host, var.uptime_host])
+
+  zone_id         = data.aws_route53_zone.this.zone_id
+  name            = local.certificate_validation[each.key].resource_record_name
+  type            = local.certificate_validation[each.key].resource_record_type
+  ttl             = 300
+  records         = [local.certificate_validation[each.key].resource_record_value]
+  allow_overwrite = true # The hand-made certificates used the same records
+}
+
+resource "aws_acm_certificate_validation" "this" {
+  certificate_arn         = aws_acm_certificate.this.arn
+  validation_record_fqdns = [for record in aws_route53_record.certificate_validation : record.fqdn]
 }
 
 resource "aws_lb_listener_rule" "uptime" {
