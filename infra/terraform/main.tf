@@ -502,7 +502,7 @@ resource "aws_efs_mount_target" "uptime" {
 }
 
 resource "aws_lb_target_group" "uptime" {
-  name = substr("${replace(local.name, "_", "-")}-uptime", 0, 32)
+  name        = substr("${replace(local.name, "_", "-")}-uptime", 0, 32)
   port        = 3001
   protocol    = "HTTP"
   target_type = "ip"
