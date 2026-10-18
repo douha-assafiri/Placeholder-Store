@@ -416,6 +416,12 @@ resource "aws_lb_listener_rule" "api" {
       values = ["/api/*"]
     }
   }
+  # Only the store, Uptime Kuma has its own /api
+  condition {
+    host_header {
+      values = [var.frontend_host]
+    }
+  }
   transform {
     type = "url-rewrite"
     url_rewrite_config {
