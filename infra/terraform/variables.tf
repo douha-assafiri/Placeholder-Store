@@ -41,11 +41,18 @@ variable "certificate_arn" {
 }
 
 variable "frontend_host" {
-  type = string
+  type        = string
+  description = "Frontend DNS hostname served by the ALB."
+}
+
+variable "api_host" {
+  type        = string
+  description = "API DNS hostname served by the ALB."
 }
 
 variable "uptime_host" {
-  type = string
+  type        = string
+  description = "Uptime Kuma DNS hostname served by the ALB."
 }
 
 variable "db_instance_class" {
