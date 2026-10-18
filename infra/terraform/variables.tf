@@ -45,11 +45,6 @@ variable "frontend_host" {
   description = "Frontend DNS hostname served by the ALB."
 }
 
-variable "api_host" {
-  type        = string
-  description = "API DNS hostname served by the ALB."
-}
-
 variable "uptime_host" {
   type        = string
   description = "Uptime Kuma DNS hostname served by the ALB."
