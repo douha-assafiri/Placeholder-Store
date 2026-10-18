@@ -641,6 +641,7 @@ resource "aws_ecs_service" "uptime" {
 
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
+  availability_zone_rebalancing      = "DISABLED" # Rebalancing needs a second copy
 
   network_configuration {
     subnets          = local.task_subnets
