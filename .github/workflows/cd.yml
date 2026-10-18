@@ -71,6 +71,9 @@ jobs:
 
   # TODO: set the AWS_DEPLOY_ENABLED repo variable to true once Terraform has run
   deploy-staging:
+    permissions:
+        contents: read
+        id-token: write
     needs: push
     if: vars.AWS_DEPLOY_ENABLED == 'true'
     uses: ./.github/workflows/deploy.yml
@@ -104,6 +107,9 @@ jobs:
 
   # The same images staging tested
   deploy-production:
+    permissions:
+        contents: read
+        id-token: write
     needs: [ push, e2e ]
     uses: ./.github/workflows/deploy.yml
     with:
