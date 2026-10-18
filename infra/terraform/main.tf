@@ -1,7 +1,7 @@
 locals {
   is_production         = var.environment == "production"
   name                  = "placeholder-store-${var.environment}"
-  task_subnets          = local.is_production ? aws_subnet.private[*].id : aws_subnet.public[*].id
+  task_subnets          = local.is_production ? values(aws_subnet.private)[*].id : values(aws_subnet.public)[*].id
   task_assign_public_ip = !local.is_production
   efs_subnets           = local.is_production ? aws_subnet.private : aws_subnet.public
 }
@@ -444,6 +444,15 @@ resource "aws_ecs_service" "api" {
   deployment_minimum_healthy_percent = local.is_production ? 100 : 0
   deployment_maximum_percent         = 200
 
+  # Roll back deploys that fail health checks
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  # Apply waits for new containers, so E2E tests the new version
+  wait_for_steady_state = true
+
   network_configuration {
     subnets          = local.task_subnets
     security_groups  = [aws_security_group.tasks.id]
@@ -456,9 +465,9 @@ resource "aws_ecs_service" "api" {
     container_port   = 8000
   }
 
-  # CD deploys new images
+  # Autoscaling sets the count
   lifecycle {
-    ignore_changes = [task_definition]
+    ignore_changes = [desired_count]
   }
 
   depends_on = [aws_lb_listener.https]
@@ -470,6 +479,14 @@ resource "aws_ecs_service" "frontend" {
   task_definition = aws_ecs_task_definition.frontend.arn
   desired_count   = local.is_production ? 2 : 1
   launch_type     = "FARGATE"
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
+  # Apply waits for new containers, so E2E tests the new version
+  wait_for_steady_state = true
 
   network_configuration {
     subnets          = local.task_subnets
@@ -483,9 +500,9 @@ resource "aws_ecs_service" "frontend" {
     container_port   = 80
   }
 
-  # CD deploys new images
+  # Autoscaling sets the count
   lifecycle {
-    ignore_changes = [task_definition]
+    ignore_changes = [desired_count]
   }
 }
 
@@ -579,6 +596,8 @@ resource "aws_cloudwatch_metric_alarm" "api_cpu" {
   statistic           = "Average"
   threshold           = 70
   alarm_description   = "API ECS CPU is above 70% for three minutes."
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
   dimensions = {
     ClusterName = aws_ecs_cluster.this.name
     ServiceName = aws_ecs_service.api.name
@@ -595,8 +614,172 @@ resource "aws_cloudwatch_metric_alarm" "api_memory" {
   statistic           = "Average"
   threshold           = 80
   alarm_description   = "API ECS memory is above 80% for three minutes."
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
   dimensions = {
     ClusterName = aws_ecs_cluster.this.name
     ServiceName = aws_ecs_service.api.name
   }
+}
+
+resource "aws_cloudwatch_metric_alarm" "api_latency" {
+  alarm_name          = "${local.name}-api-latency"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 5
+  metric_name         = "TargetResponseTime"
+  namespace           = "AWS/ApplicationELB"
+  period              = 60
+  extended_statistic  = "p95"
+  threshold           = 0.5
+  treat_missing_data  = "notBreaching"
+  alarm_description   = "95% of API requests are slower than 500 ms for five minutes."
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+  dimensions = {
+    LoadBalancer = aws_lb.this.arn_suffix
+    TargetGroup  = aws_lb_target_group.api.arn_suffix
+  }
+}
+
+resource "aws_sns_topic" "alerts" {
+  name = "${local.name}-alerts"
+}
+
+# AWS emails a confirmation link first
+resource "aws_sns_topic_subscription" "email" {
+  count     = var.alert_email == "" ? 0 : 1
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "email"
+  endpoint  = var.alert_email
+}
+
+# Production scales 1-3 copies at 70% CPU
+resource "aws_appautoscaling_target" "service" {
+  for_each = local.is_production ? {
+    api      = aws_ecs_service.api.name
+    frontend = aws_ecs_service.frontend.name
+  } : {}
+
+  service_namespace  = "ecs"
+  resource_id        = "service/${aws_ecs_cluster.this.name}/${each.value}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  min_capacity       = 1
+  max_capacity       = 3
+}
+
+resource "aws_appautoscaling_policy" "cpu" {
+  for_each = aws_appautoscaling_target.service
+
+  name               = "${local.name}-${each.key}-cpu"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = each.value.service_namespace
+  resource_id        = each.value.resource_id
+  scalable_dimension = each.value.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = 70
+    scale_out_cooldown = 60
+    scale_in_cooldown  = 300
+
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+  }
+}
+
+resource "aws_cloudwatch_dashboard" "this" {
+  dashboard_name = local.name
+
+  dashboard_body = jsonencode({
+    widgets = [
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "CPU %"
+          region = var.aws_region
+          stat   = "Average"
+          period = 60
+          metrics = [
+            ["AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.this.name, "ServiceName", aws_ecs_service.api.name],
+            ["...", aws_ecs_service.frontend.name]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Memory %"
+          region = var.aws_region
+          stat   = "Average"
+          period = 60
+          metrics = [
+            ["AWS/ECS", "MemoryUtilization", "ClusterName", aws_ecs_cluster.this.name, "ServiceName", aws_ecs_service.api.name],
+            ["...", aws_ecs_service.frontend.name]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Network bytes"
+          region = var.aws_region
+          stat   = "Sum"
+          period = 60
+          metrics = [
+            ["ECS/ContainerInsights", "NetworkRxBytes", "ClusterName", aws_ecs_cluster.this.name, "ServiceName", aws_ecs_service.api.name],
+            [".", "NetworkTxBytes", ".", ".", ".", "."]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "API p95 response time (s)"
+          region = var.aws_region
+          stat   = "p95"
+          period = 60
+          metrics = [
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", aws_lb.this.arn_suffix, "TargetGroup", aws_lb_target_group.api.arn_suffix]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Running copies"
+          region = var.aws_region
+          stat   = "Average"
+          period = 60
+          metrics = [
+            ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", aws_ecs_cluster.this.name, "ServiceName", aws_ecs_service.api.name],
+            ["...", aws_ecs_service.frontend.name]
+          ]
+        }
+      },
+      {
+        type   = "metric"
+        width  = 12
+        height = 6
+        properties = {
+          title  = "Database free storage (bytes)"
+          region = var.aws_region
+          stat   = "Average"
+          period = 300
+          metrics = [
+            ["AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", aws_db_instance.this.identifier]
+          ]
+        }
+      }
+    ]
+  })
 }

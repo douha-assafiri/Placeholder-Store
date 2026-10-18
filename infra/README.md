@@ -15,12 +15,20 @@ Each environment contains:
 - Staging: one API task, one frontend task, and one Uptime Kuma task in public
   subnets, with no NAT gateway. EFS mount targets are created in the same
   public subnets.
-- Production: two API tasks and two frontend tasks in private subnets, an ALB in
-  public subnets, and one NAT gateway per Availability Zone for outbound
-  image/log/secret access. Uptime Kuma and its EFS mount targets use private
-  subnets.
+- Production: API and frontend tasks in private subnets, autoscaling between
+  1 and 3 copies each when CPU stays above 70%, an ALB in public subnets, and
+  one NAT gateway per Availability Zone for outbound image/log/secret access.
+  Uptime Kuma and its EFS mount targets use private subnets.
 - One Uptime Kuma task with an encrypted EFS volume. Create monitors in Kuma for
-  the frontend URL and `/health/ready` on both environments.
+  the frontend URL and `/api/health/ready` on both environments.
+- A deployment circuit breaker on the API and frontend. A deploy that fails its
+  health checks rolls back to the last working version.
+- CloudWatch alarms for API CPU (70%), memory (80%) and p95 response time
+  (500 ms), sent to an SNS topic. Set `alert_email` to get them by email
+  and confirm the email AWS sends, or subscribe to the topic in the SNS
+  console (`terraform output alerts_topic`).
+- A CloudWatch dashboard with CPU, memory, network, response time, running
+  copies and database storage. `terraform output dashboard_url` links to it.
 
 The deployed hostnames use the purchased `placeholder-store.site` domain:
 
@@ -137,6 +145,13 @@ selected environment:
 
 Use the Production hostnames for a Production smoke test.
 
+To show autoscaling and response times, send load to Production and watch the
+dashboard. A new copy should start within 5 minutes:
+
+```powershell
+python infra/tests/load.py https://store.placeholder-store.site/api/places --minutes 10 --workers 50
+```
+
 ## State and secrets
 
 Use separate remote Terraform state for Staging and Production. Do not commit
@@ -144,11 +159,13 @@ the real `.tfvars` files, Terraform state, generated plans, database passwords,
 JWT secrets, or AWS credentials. Only `terraform.tfvars.example` is intended
 to be committed.
 
-Terraform creates the ECS task definitions and services. After that, CD
-deploys new images by copying the current task definition with the new image
-tag. Terraform ignores `task_definition` changes on the services, so
-`terraform apply` won't roll back a deploy.
+CD deploys new images by running `terraform apply` with the new image tags.
+Terraform ignores `desired_count` on the services, so `apply` doesn't undo
+autoscaling.
 
-CD deploys only when the `AWS_DEPLOY_ENABLED` repo variable is `true`. It
-also needs `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets, and a
-`FRONTEND_URL` variable on the `staging` environment for E2E.
+CD runs `.github/workflows/deploy.yml` for staging, then E2E, then production.
+It needs `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` secrets (plus an
+optional `ALERT_EMAIL` secret), and these repo variables: `TF_STATE_BUCKET`,
+`STAGING_CERTIFICATE_ARN`, `PRODUCTION_CERTIFICATE_ARN`,
+`STAGING_FRONTEND_HOST`, `PRODUCTION_FRONTEND_HOST`, `STAGING_UPTIME_HOST`
+and `PRODUCTION_UPTIME_HOST`.
