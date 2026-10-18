@@ -19,6 +19,6 @@ def test_health_without_database(client):
     assert response.status_code == 503
     assert response.json()["database"] == "unavailable"
 
-def test_routes_are_under_api(client):
-    assert client.get("http://testserver/places").status_code == 404
+def test_routes_are_not_under_api(client):
+    assert client.get("http://testserver/api/places").status_code == 404
     assert client.get("/places").status_code == 200

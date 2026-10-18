@@ -8,7 +8,6 @@ frontend_image    = "docker.io/YOUR_DOCKERHUB_USERNAME/placeholder-store:fronten
 certificate_arn   = "arn:aws:acm:ap-southeast-2:AWS_ACCOUNT_ID:certificate/CERTIFICATE_ID"
 
 frontend_host = "staging.placeholder-store.site"
-api_host      = "staging-api.placeholder-store.site"
 uptime_host   = "staging-monitor.placeholder-store.site"
 
 # Optional; currently reserved for notification configuration.
