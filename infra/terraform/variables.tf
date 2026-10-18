@@ -32,7 +32,7 @@ variable "frontend_image" {
 
 variable "uptime_kuma_image" {
   type    = string
-  default = "louislam/uptime-kuma:1"
+  default = "louislam/uptime-kuma:2"
 }
 
 variable "certificate_arn" {
