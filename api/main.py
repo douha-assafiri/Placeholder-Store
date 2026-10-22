@@ -2,7 +2,7 @@ from database import Base, engine, LocalSession
 from initial_data import add_initial_data
 from routes import accounts, health, orders, places
 
-from fastapi import FastAPI
+from fastapi import FastAPI, status, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 Base.metadata.create_all(engine)
@@ -22,6 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/test", responses={200: {"description": "Test endpoint"}})
+async def test_endpoint():
+    return Response(status_code=status.HTTP_200_OK, content="Test endpoint is working")
 app.include_router(accounts.router)
 app.include_router(orders.router)
 app.include_router(places.router)

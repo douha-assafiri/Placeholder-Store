@@ -3,6 +3,15 @@ import {Link, NavLink, useNavigate} from 'react-router-dom'
 import {ArrowRight, Menu, Search, ShoppingBag, UserRound, X} from 'lucide-react'
 import {useStore} from '../context/useStore'
 
+async function getTestRequest() {
+    let url = `/api/test`;
+
+    let response = await fetch(url, {
+        method: 'GET',
+    });
+    return await response.text();
+};
+
 export default function Header() {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -14,10 +23,16 @@ export default function Header() {
             collection <ArrowRight size={13}/></Link></div>
         <header className="site-header">
             <div className="header-inner"><Link to="/"
-                                                className="brand">placeholder<span>.</span><small>STORE</small></Link>
+                                                className="brand">thing<span>.</span><small>STORE</small></Link>
                 <nav className="desktop-nav">{links.map(([path, label]) => <NavLink key={path} to={path}
                                                                                     end={path === '/'}
                                                                                     className={({isActive}) => isActive ? 'active' : ''}>{label}</NavLink>)}</nav>
+                <div className="test-response">
+                    <button onClick={async () => {
+                        const response = await getTestRequest();
+                        alert(response);
+                    }}>Show Test Response</button>
+                </div>
                 <form className="header-search" onSubmit={e => {
                     e.preventDefault();
                     navigate('/shop?q=' + encodeURIComponent(query));
@@ -41,4 +56,3 @@ export default function Header() {
                 </nav>}</header>
     </>
 }
-
